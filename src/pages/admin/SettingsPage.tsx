@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import type { OrganizationSettings } from '../../domain/models';
-import { repositories, resetDemoData } from '../../services/repositories/localRepositories';
+import { repositories, resetDemoData, usesApiDataSource } from '../../services/repositories/localRepositories';
 
 const fallback: OrganizationSettings = { name: '', document: '', phone: '', email: '', pixKey: '', city: '' };
 
@@ -32,8 +32,8 @@ export function SettingsPage() {
           </form>
         </Card>
         <div className="settings-side">
-          <Card><span className="settings-icon"><DatabaseBackup size={22} /></span><h3>Fonte de dados</h3><p>Esta versão utiliza repositories locais. A camada pode ser trocada por uma API Spring Boot sem reescrever as páginas.</p><code>VITE_DATA_SOURCE=local</code></Card>
-          <Card><span className="settings-icon"><RotateCcw size={22} /></span><h3>Restaurar demonstração</h3><p>Recarregue os alunos, agenda, treinos e pagamentos originais do projeto.</p><Button variant="secondary" onClick={() => { resetDemoData(); window.location.reload(); }}>Restaurar dados</Button></Card>
+          <Card><span className="settings-icon"><DatabaseBackup size={22} /></span><h3>Fonte de dados</h3><p>{usesApiDataSource ? 'Esta sessão está conectada à API Spring Boot.' : 'Esta sessão utiliza repositories locais no navegador.'}</p><code>VITE_DATA_SOURCE={usesApiDataSource ? 'api' : 'local'}</code></Card>
+          {!usesApiDataSource && <Card><span className="settings-icon"><RotateCcw size={22} /></span><h3>Restaurar demonstração</h3><p>Recarregue os alunos, agenda, treinos e pagamentos originais do projeto.</p><Button variant="secondary" onClick={() => { resetDemoData(); window.location.reload(); }}>Restaurar dados</Button></Card>}
         </div>
       </section>
     </div>
