@@ -4,8 +4,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { StatCard } from '../../components/ui/StatCard';
-import { studentProgressSeed } from '../../data/mocks/seed';
-import type { Payment, ScheduleEvent, Student, WorkoutPlan } from '../../domain/models';
+import type { Payment, ScheduleEvent, Student, StudentProgressPoint, WorkoutPlan } from '../../domain/models';
 import { useAuth } from '../../features/auth/AuthContext';
 import { repositories } from '../../services/repositories/localRepositories';
 import { formatCurrency, formatDate, getFirstName } from '../../utils/format';
@@ -16,11 +15,12 @@ export function StudentHomePage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [plans, setPlans] = useState<WorkoutPlan[]>([]);
+  const [progressPoints, setProgressPoints] = useState<StudentProgressPoint[]>([]);
 
   useEffect(() => {
     if (!user?.linkedStudentId) return;
-    void Promise.all([repositories.students.findById(user.linkedStudentId), repositories.payments.findAll(), repositories.schedule.findAll(), repositories.workouts.findAll()]).then(([studentData, paymentData, eventData, planData]) => {
-      setStudent(studentData); setPayments(paymentData.filter((item) => item.studentId === user.linkedStudentId)); setEvents(eventData.filter((item) => item.studentId === user.linkedStudentId)); setPlans(planData.filter((item) => item.assignedStudentIds.includes(user.linkedStudentId!)));
+    void Promise.all([repositories.students.findById(user.linkedStudentId), repositories.payments.findAll(), repositories.schedule.findAll(), repositories.workouts.findAll(), repositories.dashboard.getStudentProgress()]).then(([studentData, paymentData, eventData, planData, progressData]) => {
+      setStudent(studentData); setPayments(paymentData.filter((item) => item.studentId === user.linkedStudentId)); setEvents(eventData.filter((item) => item.studentId === user.linkedStudentId)); setPlans(planData.filter((item) => item.assignedStudentIds.includes(user.linkedStudentId!))); setProgressPoints(progressData);
     });
   }, [user]);
 
@@ -42,7 +42,7 @@ export function StudentHomePage() {
       </section>
 
       <section className="dashboard-grid dashboard-grid--wide">
-        <Card className="chart-card"><div className="section-heading"><div><span>EVOLUÇÃO</span><h2>Performance e consistência</h2></div><span className="soft-pill">Últimos 6 meses</span></div><div className="chart-area"><ResponsiveContainer width="100%" height="100%"><AreaChart data={studentProgressSeed} margin={{ left: -20, right: 8 }}><defs><linearGradient id="performanceFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FFD54A" stopOpacity={0.35}/><stop offset="100%" stopColor="#FFD54A" stopOpacity={0}/></linearGradient></defs><CartesianGrid stroke="#2A2A2A" vertical={false}/><XAxis dataKey="month" stroke="#777" tickLine={false} axisLine={false}/><YAxis domain={[0,100]} stroke="#777" tickLine={false} axisLine={false}/><Tooltip contentStyle={{ background:'#171717', border:'1px solid #303030', borderRadius:12 }}/><Area type="monotone" dataKey="performance" name="Performance" stroke="#FFD54A" strokeWidth={3} fill="url(#performanceFill)"/><Area type="monotone" dataKey="consistency" name="Consistência" stroke="#848484" strokeWidth={2} fill="transparent"/></AreaChart></ResponsiveContainer></div></Card>
+        <Card className="chart-card"><div className="section-heading"><div><span>EVOLUÇÃO</span><h2>Performance e consistência</h2></div><span className="soft-pill">Últimos 6 meses</span></div><div className="chart-area"><ResponsiveContainer width="100%" height="100%"><AreaChart data={progressPoints} margin={{ left: -20, right: 8 }}><defs><linearGradient id="performanceFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FFD54A" stopOpacity={0.35}/><stop offset="100%" stopColor="#FFD54A" stopOpacity={0}/></linearGradient></defs><CartesianGrid stroke="#2A2A2A" vertical={false}/><XAxis dataKey="month" stroke="#777" tickLine={false} axisLine={false}/><YAxis domain={[0,100]} stroke="#777" tickLine={false} axisLine={false}/><Tooltip contentStyle={{ background:'#171717', border:'1px solid #303030', borderRadius:12 }}/><Area type="monotone" dataKey="performance" name="Performance" stroke="#FFD54A" strokeWidth={3} fill="url(#performanceFill)"/><Area type="monotone" dataKey="consistency" name="Consistência" stroke="#848484" strokeWidth={2} fill="transparent"/></AreaChart></ResponsiveContainer></div></Card>
         <Card className="next-session-card"><span className="next-session-card__icon"><CalendarClock size={24}/></span><span className="eyebrow">PRÓXIMA SESSÃO</span><h2>{nextEvent?.title ?? 'Sem sessão agendada'}</h2>{nextEvent && <><strong>{formatDate(nextEvent.date)} · {nextEvent.time}</strong><p>{nextEvent.location} · {nextEvent.durationMinutes} minutos</p><Badge status={nextEvent.type}/></>}</Card>
       </section>
 

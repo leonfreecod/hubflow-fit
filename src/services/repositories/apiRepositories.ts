@@ -1,14 +1,17 @@
 import type {
+  MonthlyRevenue,
   OrganizationSettings,
   Payment,
   ScheduleEvent,
   Student,
+  StudentProgressPoint,
   User,
   WorkoutPlan,
 } from '../../domain/models';
 import { ApiError, apiRequest, apiSession } from '../api/apiClient';
 import type {
   CrudRepository,
+  DashboardRepository,
   OrganizationRepository,
   UserRepository,
 } from './repositoryContracts';
@@ -93,6 +96,16 @@ class ApiOrganizationRepository implements OrganizationRepository {
   }
 }
 
+class ApiDashboardRepository implements DashboardRepository {
+  getMonthlyRevenue(): Promise<MonthlyRevenue[]> {
+    return apiRequest<MonthlyRevenue[]>('/dashboard/monthly-revenue');
+  }
+
+  getStudentProgress(): Promise<StudentProgressPoint[]> {
+    return apiRequest<StudentProgressPoint[]>('/dashboard/student-progress');
+  }
+}
+
 export const apiRepositories = {
   users: new ApiUserRepository(),
   students: new ApiCrudRepository<Student>('/students'),
@@ -100,4 +113,5 @@ export const apiRepositories = {
   schedule: new ApiCrudRepository<ScheduleEvent>('/schedule'),
   workouts: new ApiCrudRepository<WorkoutPlan>('/workouts'),
   organization: new ApiOrganizationRepository(),
+  dashboard: new ApiDashboardRepository(),
 };

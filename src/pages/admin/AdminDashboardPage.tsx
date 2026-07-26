@@ -7,8 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { StatCard } from '../../components/ui/StatCard';
-import { monthlyRevenueSeed } from '../../data/mocks/seed';
-import type { Payment, ScheduleEvent, Student } from '../../domain/models';
+import type { MonthlyRevenue, Payment, ScheduleEvent, Student } from '../../domain/models';
 import { repositories } from '../../services/repositories/localRepositories';
 import { formatCurrency, formatDate, getFirstName } from '../../utils/format';
 import { useAuth } from '../../features/auth/AuthContext';
@@ -18,12 +17,14 @@ export function AdminDashboardPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<MonthlyRevenue[]>([]);
 
   useEffect(() => {
     void Promise.all([
-      repositories.students.findAll(), repositories.payments.findAll(), repositories.schedule.findAll(),
-    ]).then(([studentData, paymentData, eventData]) => {
-      setStudents(studentData); setPayments(paymentData); setEvents(eventData);
+      repositories.students.findAll(), repositories.payments.findAll(),
+      repositories.schedule.findAll(), repositories.dashboard.getMonthlyRevenue(),
+    ]).then(([studentData, paymentData, eventData, revenueData]) => {
+      setStudents(studentData); setPayments(paymentData); setEvents(eventData); setMonthlyRevenue(revenueData);
     });
   }, []);
 
@@ -53,7 +54,7 @@ export function AdminDashboardPage() {
           <div className="chart-legend"><span><i className="dot dot--yellow" /> Receita</span><span><i className="dot dot--gray" /> Despesas</span></div>
           <div className="chart-area">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyRevenueSeed} margin={{ left: -10, right: 8, top: 8 }}>
+              <AreaChart data={monthlyRevenue} margin={{ left: -10, right: 8, top: 8 }}>
                 <defs>
                   <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#FFD54A" stopOpacity={0.35} /><stop offset="100%" stopColor="#FFD54A" stopOpacity={0} /></linearGradient>
                 </defs>
