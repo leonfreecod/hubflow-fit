@@ -18,8 +18,8 @@ export function SettingsPage() {
 
   return (
     <div className="page-stack">
-      <header className="page-heading"><div><span className="eyebrow">CONFIGURAÇÕES</span><h1>Organização</h1><p>Dados gerais, cobrança e preferências do ambiente demonstrativo.</p></div></header>
       <section className="settings-container">
+        <header className="page-heading"><div><span className="eyebrow">CONFIGURAÇÕES</span><h1>Organização</h1><p>Dados gerais, cobrança e preferências do ambiente demonstrativo.</p></div></header>
         <Card className="settings-card"><div className="section-heading"><div><span>PERFIL DA ASSESSORIA</span><h2>Dados do negócio</h2></div><ShieldCheck size={21} /></div>
           <form onSubmit={submit} className="form-grid settings-form">
             <label className="field field--span-2"><span>Nome da organização</span><input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
