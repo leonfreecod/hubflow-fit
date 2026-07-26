@@ -20,6 +20,7 @@ import type {
   OrganizationRepository,
   UserRepository,
 } from './repositoryContracts';
+import { apiRepositories } from './apiRepositories';
 
 class LocalCrudRepository<T extends { id: string }> implements CrudRepository<T> {
   constructor(private readonly key: string, private readonly seed: T[]) {
@@ -87,7 +88,7 @@ class LocalOrganizationRepository implements OrganizationRepository {
   }
 }
 
-export const repositories = {
+export const localRepositories = {
   users: new LocalUserRepository(),
   students: new LocalCrudRepository<Student>(storageKeys.students, studentsSeed),
   payments: new LocalCrudRepository<Payment>(storageKeys.payments, paymentsSeed),
@@ -95,6 +96,12 @@ export const repositories = {
   workouts: new LocalCrudRepository<WorkoutPlan>(storageKeys.workouts, workoutsSeed),
   organization: new LocalOrganizationRepository(),
 };
+
+export const usesApiDataSource = import.meta.env.VITE_DATA_SOURCE === 'api';
+
+export const repositories = usesApiDataSource
+  ? apiRepositories
+  : localRepositories;
 
 export function resetDemoData(): void {
   writeStorage(storageKeys.users, usersSeed);

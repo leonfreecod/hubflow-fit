@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from '../../domain/models';
 import { repositories } from '../../services/repositories/localRepositories';
+import { apiSession } from '../../services/api/apiClient';
 import { readStorage, storageKeys, writeStorage } from '../../services/storage/storage';
 
 interface AuthContextValue {
@@ -18,9 +19,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const restore = async () => {
-      const userId = readStorage<string | null>(storageKeys.session, null);
-      if (userId) setUser(await repositories.users.findById(userId));
-      setLoading(false);
+      try {
+        const userId = readStorage<string | null>(storageKeys.session, null);
+        if (userId) setUser(await repositories.users.findById(userId));
+      } catch {
+        setUser(null);
+        apiSession.clear();
+        localStorage.removeItem(storageKeys.session);
+      } finally {
+        setLoading(false);
+      }
     };
     void restore();
   }, []);
@@ -37,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     logout() {
       setUser(null);
+      apiSession.clear();
       localStorage.removeItem(storageKeys.session);
     },
   }), [user, loading]);

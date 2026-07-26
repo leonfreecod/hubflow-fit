@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { Button } from '../../components/ui/Button';
 import { brand } from '../../config/brand';
 import { useAuth } from '../../features/auth/AuthContext';
+import { usesApiDataSource } from '../../services/repositories/localRepositories';
 
 export function LoginPage() {
   const [email, setEmail] = useState('admin@hubflow.fit');
@@ -22,9 +23,14 @@ export function LoginPage() {
     event.preventDefault();
     setError('');
     setSubmitting(true);
-    const ok = await login(email, password);
-    setSubmitting(false);
-    if (!ok) setError('E-mail ou senha inválidos. Use uma das contas demonstrativas.');
+    try {
+      const ok = await login(email, password);
+      if (!ok) setError('E-mail ou senha inválidos. Use uma das contas demonstrativas.');
+    } catch {
+      setError('Não foi possível conectar ao servidor. Tente novamente em instantes.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function useDemo(role: 'ADMIN' | 'STUDENT') {
@@ -76,7 +82,7 @@ export function LoginPage() {
             <Button type="submit" disabled={submitting}>{submitting ? 'Entrando...' : 'Entrar na plataforma'} <ArrowRight size={18} /></Button>
           </form>
 
-          <p className="login-note">Projeto demonstrativo com dados simulados e persistência local.</p>
+          <p className="login-note">{usesApiDataSource ? 'Dados protegidos pela API HubFlow Fit.' : 'Projeto demonstrativo com dados simulados e persistência local.'}</p>
         </div>
       </section>
     </main>
