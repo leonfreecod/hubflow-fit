@@ -1,0 +1,106 @@
+import type {
+  OrganizationSettings,
+  Payment,
+  ScheduleEvent,
+  Student,
+  User,
+  WorkoutPlan,
+} from '../../domain/models';
+import {
+  organizationSeed,
+  paymentsSeed,
+  scheduleSeed,
+  studentsSeed,
+  usersSeed,
+  workoutsSeed,
+} from '../../data/mocks/seed';
+import { readStorage, storageKeys, writeStorage } from '../storage/storage';
+import type {
+  CrudRepository,
+  OrganizationRepository,
+  UserRepository,
+} from './repositoryContracts';
+
+class LocalCrudRepository<T extends { id: string }> implements CrudRepository<T> {
+  constructor(private readonly key: string, private readonly seed: T[]) {
+    if (!localStorage.getItem(key)) writeStorage(key, seed);
+  }
+
+  async findAll(): Promise<T[]> {
+    return readStorage(this.key, this.seed);
+  }
+
+  async findById(id: string): Promise<T | null> {
+    const items = await this.findAll();
+    return items.find((item) => item.id === id) ?? null;
+  }
+
+  async create(entity: T): Promise<T> {
+    const items = await this.findAll();
+    writeStorage(this.key, [...items, entity]);
+    return entity;
+  }
+
+  async update(entity: T): Promise<T> {
+    const items = await this.findAll();
+    const next = items.map((item) => (item.id === entity.id ? entity : item));
+    writeStorage(this.key, next);
+    return entity;
+  }
+
+  async remove(id: string): Promise<void> {
+    const items = await this.findAll();
+    writeStorage(this.key, items.filter((item) => item.id !== id));
+  }
+}
+
+class LocalUserRepository implements UserRepository {
+  constructor() {
+    if (!localStorage.getItem(storageKeys.users)) writeStorage(storageKeys.users, usersSeed);
+  }
+
+  async findByCredentials(email: string, password: string): Promise<User | null> {
+    const users = readStorage<User[]>(storageKeys.users, usersSeed);
+    return users.find((user) => user.email === email && user.password === password) ?? null;
+  }
+
+  async findById(id: string): Promise<User | null> {
+    const users = readStorage<User[]>(storageKeys.users, usersSeed);
+    return users.find((user) => user.id === id) ?? null;
+  }
+}
+
+class LocalOrganizationRepository implements OrganizationRepository {
+  constructor() {
+    if (!localStorage.getItem(storageKeys.organization)) {
+      writeStorage(storageKeys.organization, organizationSeed);
+    }
+  }
+
+  async get(): Promise<OrganizationSettings> {
+    return readStorage(storageKeys.organization, organizationSeed);
+  }
+
+  async save(settings: OrganizationSettings): Promise<OrganizationSettings> {
+    writeStorage(storageKeys.organization, settings);
+    return settings;
+  }
+}
+
+export const repositories = {
+  users: new LocalUserRepository(),
+  students: new LocalCrudRepository<Student>(storageKeys.students, studentsSeed),
+  payments: new LocalCrudRepository<Payment>(storageKeys.payments, paymentsSeed),
+  schedule: new LocalCrudRepository<ScheduleEvent>(storageKeys.schedule, scheduleSeed),
+  workouts: new LocalCrudRepository<WorkoutPlan>(storageKeys.workouts, workoutsSeed),
+  organization: new LocalOrganizationRepository(),
+};
+
+export function resetDemoData(): void {
+  writeStorage(storageKeys.users, usersSeed);
+  writeStorage(storageKeys.students, studentsSeed);
+  writeStorage(storageKeys.payments, paymentsSeed);
+  writeStorage(storageKeys.schedule, scheduleSeed);
+  writeStorage(storageKeys.workouts, workoutsSeed);
+  writeStorage(storageKeys.organization, organizationSeed);
+}
