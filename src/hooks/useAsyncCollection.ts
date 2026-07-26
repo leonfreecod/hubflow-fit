@@ -4,12 +4,19 @@ import type { CrudRepository } from '../services/repositories/repositoryContract
 export function useAsyncCollection<T extends { id: string }>(repository: CrudRepository<T>) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
-    const data = await repository.findAll();
-    setItems(data);
-    setLoading(false);
+    setError(null);
+    try {
+      const data = await repository.findAll();
+      setItems(data);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível carregar os dados.');
+    } finally {
+      setLoading(false);
+    }
   }, [repository]);
 
   useEffect(() => {
@@ -31,5 +38,5 @@ export function useAsyncCollection<T extends { id: string }>(repository: CrudRep
     await reload();
   };
 
-  return { items, loading, reload, create, update, remove };
+  return { items, loading, error, reload, create, update, remove };
 }

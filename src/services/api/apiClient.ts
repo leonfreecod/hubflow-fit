@@ -1,5 +1,6 @@
 const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api').replace(/\/$/, '');
 const tokenKey = 'hubflow.api.token';
+export const apiUnauthorizedEvent = 'hubflow:api-unauthorized';
 
 interface ApiErrorBody {
   message?: string;
@@ -27,6 +28,10 @@ export const apiSession = {
   clear(): void {
     localStorage.removeItem(tokenKey);
   },
+  expire(): void {
+    this.clear();
+    window.dispatchEvent(new Event(apiUnauthorizedEvent));
+  },
 };
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -45,7 +50,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     } catch {
       // Some infrastructure errors do not return JSON.
     }
-    if (response.status === 401) apiSession.clear();
+    if (response.status === 401) apiSession.expire();
     throw new ApiError(response.status, body.message ?? `Erro HTTP ${response.status}.`, body.fieldErrors);
   }
 

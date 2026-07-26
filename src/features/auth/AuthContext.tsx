@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from '../../domain/models';
 import { repositories } from '../../services/repositories/localRepositories';
-import { apiSession } from '../../services/api/apiClient';
+import { apiSession, apiUnauthorizedEvent } from '../../services/api/apiClient';
 import { readStorage, storageKeys, writeStorage } from '../../services/storage/storage';
 
 interface AuthContextValue {
@@ -31,6 +31,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
     void restore();
+  }, []);
+
+  useEffect(() => {
+    const expireSession = () => {
+      setUser(null);
+      localStorage.removeItem(storageKeys.session);
+    };
+    window.addEventListener(apiUnauthorizedEvent, expireSession);
+    return () => window.removeEventListener(apiUnauthorizedEvent, expireSession);
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
