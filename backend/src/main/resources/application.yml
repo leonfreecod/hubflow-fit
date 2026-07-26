@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: hubflow-fit-api
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${PORT:8080}
+
+app:
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
+  jwt:
+    secret: ${JWT_SECRET:hubflow-development-secret-key-change-in-production-2026}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
