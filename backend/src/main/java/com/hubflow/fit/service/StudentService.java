@@ -10,6 +10,7 @@ import com.hubflow.fit.repository.AppUserRepository;
 import com.hubflow.fit.repository.PaymentRepository;
 import com.hubflow.fit.repository.ScheduleEventRepository;
 import com.hubflow.fit.repository.StudentRepository;
+import com.hubflow.fit.repository.StudentProgressPointRepository;
 import com.hubflow.fit.repository.WorkoutPlanRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ public class StudentService {
     private final PaymentRepository paymentRepository;
     private final ScheduleEventRepository scheduleEventRepository;
     private final WorkoutPlanRepository workoutPlanRepository;
+    private final StudentProgressPointRepository studentProgressPointRepository;
     private final ApiMapper apiMapper;
     private final CurrentUserService currentUserService;
 
@@ -36,6 +38,7 @@ public class StudentService {
             PaymentRepository paymentRepository,
             ScheduleEventRepository scheduleEventRepository,
             WorkoutPlanRepository workoutPlanRepository,
+            StudentProgressPointRepository studentProgressPointRepository,
             ApiMapper apiMapper,
             CurrentUserService currentUserService
     ) {
@@ -44,6 +47,7 @@ public class StudentService {
         this.paymentRepository = paymentRepository;
         this.scheduleEventRepository = scheduleEventRepository;
         this.workoutPlanRepository = workoutPlanRepository;
+        this.studentProgressPointRepository = studentProgressPointRepository;
         this.apiMapper = apiMapper;
         this.currentUserService = currentUserService;
     }
@@ -112,6 +116,7 @@ public class StudentService {
         scheduleEventRepository.deleteAll(
                 scheduleEventRepository.findAllByStudentIdOrderByDateAscTimeAsc(student.getId())
         );
+        studentProgressPointRepository.deleteAllByStudentId(student.getId());
         workoutPlanRepository.findDistinctByAssignedStudents_Id(student.getId())
                 .forEach(workout -> workout.getAssignedStudents().remove(student));
         studentRepository.delete(student);

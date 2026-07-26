@@ -1,6 +1,7 @@
 package com.hubflow.fit.config;
 
 import com.hubflow.fit.domain.AppUser;
+import com.hubflow.fit.domain.MonthlyRevenue;
 import com.hubflow.fit.domain.OrganizationSettings;
 import com.hubflow.fit.domain.Payment;
 import com.hubflow.fit.domain.PaymentMethod;
@@ -9,15 +10,18 @@ import com.hubflow.fit.domain.ScheduleEvent;
 import com.hubflow.fit.domain.ScheduleStatus;
 import com.hubflow.fit.domain.ScheduleType;
 import com.hubflow.fit.domain.Student;
+import com.hubflow.fit.domain.StudentProgressPoint;
 import com.hubflow.fit.domain.StudentStatus;
 import com.hubflow.fit.domain.UserRole;
 import com.hubflow.fit.domain.WorkoutLevel;
 import com.hubflow.fit.domain.WorkoutPlan;
 import com.hubflow.fit.repository.AppUserRepository;
+import com.hubflow.fit.repository.MonthlyRevenueRepository;
 import com.hubflow.fit.repository.OrganizationSettingsRepository;
 import com.hubflow.fit.repository.PaymentRepository;
 import com.hubflow.fit.repository.ScheduleEventRepository;
 import com.hubflow.fit.repository.StudentRepository;
+import com.hubflow.fit.repository.StudentProgressPointRepository;
 import com.hubflow.fit.repository.WorkoutPlanRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -150,12 +154,32 @@ public class DevDataInitializer implements ApplicationRunner {
             )
     );
 
+    private static final List<MonthlyRevenueSeed> MONTHLY_REVENUES = List.of(
+            new MonthlyRevenueSeed("Fev", "7860.00", "2840.00"),
+            new MonthlyRevenueSeed("Mar", "8420.00", "3020.00"),
+            new MonthlyRevenueSeed("Abr", "8990.00", "3210.00"),
+            new MonthlyRevenueSeed("Mai", "9450.00", "3180.00"),
+            new MonthlyRevenueSeed("Jun", "10180.00", "3460.00"),
+            new MonthlyRevenueSeed("Jul", "11240.00", "3650.00")
+    );
+
+    private static final List<ProgressSeed> STUDENT_PROGRESS = List.of(
+            new ProgressSeed("Fev", 52, 61),
+            new ProgressSeed("Mar", 60, 68),
+            new ProgressSeed("Abr", 64, 72),
+            new ProgressSeed("Mai", 71, 76),
+            new ProgressSeed("Jun", 77, 81),
+            new ProgressSeed("Jul", 82, 88)
+    );
+
     private final StudentRepository studentRepository;
     private final AppUserRepository appUserRepository;
     private final OrganizationSettingsRepository organizationSettingsRepository;
     private final PaymentRepository paymentRepository;
     private final ScheduleEventRepository scheduleEventRepository;
     private final WorkoutPlanRepository workoutPlanRepository;
+    private final MonthlyRevenueRepository monthlyRevenueRepository;
+    private final StudentProgressPointRepository studentProgressPointRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public DevDataInitializer(
@@ -164,7 +188,9 @@ public class DevDataInitializer implements ApplicationRunner {
             OrganizationSettingsRepository organizationSettingsRepository,
             PaymentRepository paymentRepository,
             ScheduleEventRepository scheduleEventRepository,
-            WorkoutPlanRepository workoutPlanRepository
+            WorkoutPlanRepository workoutPlanRepository,
+            MonthlyRevenueRepository monthlyRevenueRepository,
+            StudentProgressPointRepository studentProgressPointRepository
     ) {
         this.studentRepository = studentRepository;
         this.appUserRepository = appUserRepository;
@@ -172,6 +198,8 @@ public class DevDataInitializer implements ApplicationRunner {
         this.paymentRepository = paymentRepository;
         this.scheduleEventRepository = scheduleEventRepository;
         this.workoutPlanRepository = workoutPlanRepository;
+        this.monthlyRevenueRepository = monthlyRevenueRepository;
+        this.studentProgressPointRepository = studentProgressPointRepository;
     }
 
     @Override
@@ -183,12 +211,15 @@ public class DevDataInitializer implements ApplicationRunner {
         int paymentsCreated = seedPayments(students.byKey());
         int eventsCreated = seedSchedule(students.byKey());
         int workoutsCreated = seedWorkouts(students.byKey());
+        int revenuesCreated = seedMonthlyRevenue();
+        int progressCreated = seedStudentProgress(students.byKey().get("student-001"));
 
         log.info(
                 "Seed dev verificado: {} aluno(s), {} organização(ões), {} usuário(s), "
-                        + "{} pagamento(s), {} evento(s) e {} treino(s) criado(s)",
+                        + "{} pagamento(s), {} evento(s), {} treino(s), {} receita(s) "
+                        + "e {} ponto(s) de progresso criado(s)",
                 students.created(), organizationsCreated, usersCreated, paymentsCreated,
-                eventsCreated, workoutsCreated
+                eventsCreated, workoutsCreated, revenuesCreated, progressCreated
         );
     }
 
@@ -298,6 +329,41 @@ public class DevDataInitializer implements ApplicationRunner {
             }
         }
         return created;
+    }
+
+    private int seedMonthlyRevenue() {
+        if (monthlyRevenueRepository.count() > 0) {
+            return 0;
+        }
+        int order = 0;
+        for (MonthlyRevenueSeed seed : MONTHLY_REVENUES) {
+            MonthlyRevenue item = new MonthlyRevenue();
+            item.setMonth(seed.month());
+            item.setRevenue(new BigDecimal(seed.revenue()));
+            item.setExpenses(new BigDecimal(seed.expenses()));
+            item.setDisplayOrder(order++);
+            monthlyRevenueRepository.save(item);
+        }
+        return MONTHLY_REVENUES.size();
+    }
+
+    private int seedStudentProgress(Student student) {
+        if (!studentProgressPointRepository
+                .findAllByStudentIdOrderByDisplayOrderAsc(student.getId())
+                .isEmpty()) {
+            return 0;
+        }
+        int order = 0;
+        for (ProgressSeed seed : STUDENT_PROGRESS) {
+            StudentProgressPoint point = new StudentProgressPoint();
+            point.setStudent(student);
+            point.setMonth(seed.month());
+            point.setPerformance(seed.performance());
+            point.setConsistency(seed.consistency());
+            point.setDisplayOrder(order++);
+            studentProgressPointRepository.save(point);
+        }
+        return STUDENT_PROGRESS.size();
     }
 
     private Student toStudent(StudentSeed seed) {
@@ -420,5 +486,11 @@ public class DevDataInitializer implements ApplicationRunner {
             String updatedAt,
             String description
     ) {
+    }
+
+    private record MonthlyRevenueSeed(String month, String revenue, String expenses) {
+    }
+
+    private record ProgressSeed(String month, int performance, int consistency) {
     }
 }

@@ -36,6 +36,12 @@ class ManagementApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(6));
 
+        mockMvc.perform(get("/api/dashboard/monthly-revenue")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(6))
+                .andExpect(jsonPath("$[5].month").value("Jul"));
+
         String createdBody = mockMvc.perform(post("/api/students")
                         .header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -85,6 +91,12 @@ class ManagementApiIntegrationTest {
                                 org.hamcrest.Matchers.equalTo("Mariana Costa")
                         )
                 ));
+
+        mockMvc.perform(get("/api/dashboard/student-progress")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(6))
+                .andExpect(jsonPath("$[5].consistency").value(88));
 
         mockMvc.perform(post("/api/students")
                         .header("Authorization", bearer(token))
