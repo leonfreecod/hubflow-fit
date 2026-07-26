@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/hubflow}
+    username: ${DATABASE_USERNAME:hubflow}
+    password: ${DATABASE_PASSWORD:hubflow_dev}
+  flyway:
+    locations: classpath:db/migration

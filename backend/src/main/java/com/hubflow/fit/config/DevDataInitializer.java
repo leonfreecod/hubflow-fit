@@ -38,7 +38,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
-@Profile("dev")
+@Profile({"dev", "docker"})
 public class DevDataInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevDataInitializer.class);

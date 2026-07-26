@@ -1,7 +1,13 @@
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/hubflow}
-    username: ${DATABASE_USERNAME:hubflow}
-    password: ${DATABASE_PASSWORD:hubflow}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
   flyway:
     locations: classpath:db/migration
+
+app:
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN}
+  jwt:
+    secret: ${JWT_SECRET}

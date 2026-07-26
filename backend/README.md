@@ -33,8 +33,9 @@ Na raiz do repositório:
 docker compose up --build
 ```
 
-Esse comando inicia apenas o PostgreSQL e o backend. O frontend continua sendo
-executado separadamente a partir da raiz. Para encerrar os contêineres:
+Esse comando inicia apenas o PostgreSQL e o backend com o perfil local
+`docker`, incluindo as contas e os dados demonstrativos. O frontend continua
+sendo executado separadamente a partir da raiz. Para encerrar os contêineres:
 
 ```bash
 docker compose down
@@ -83,11 +84,11 @@ configurar opções da JVM sem alterar a imagem.
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |
-| `SPRING_PROFILES_ACTIVE` | `dev` | Use `prod` para PostgreSQL |
+| `SPRING_PROFILES_ACTIVE` | `dev` | `docker` no Compose; use `prod` em produção |
 | `DATABASE_URL` | `jdbc:postgresql://localhost:5432/hubflow` no perfil `prod` | URL JDBC |
 | `DATABASE_USERNAME` | `hubflow` | Usuário do banco |
 | `DATABASE_PASSWORD` | `hubflow` | Senha do banco; deve ser alterada fora do ambiente local |
-| `JWT_SECRET` | segredo somente para desenvolvimento | Assinatura dos tokens; use um valor longo e aleatório |
+| `JWT_SECRET` | segredo somente nos perfis locais | Obrigatório em `prod`; use um valor longo e aleatório |
 | `JWT_EXPIRATION_MINUTES` | `480` | Validade do token em minutos |
 | `CORS_ALLOWED_ORIGIN` | `http://localhost:5173` | Origem permitida para o frontend |
 | `PORT` | `8080` | Porta HTTP da API |
