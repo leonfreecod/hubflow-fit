@@ -6,7 +6,11 @@ import com.hubflow.fit.dto.StudentRequest;
 import com.hubflow.fit.dto.StudentResponse;
 import com.hubflow.fit.exception.ConflictException;
 import com.hubflow.fit.exception.NotFoundException;
+import com.hubflow.fit.repository.AppUserRepository;
+import com.hubflow.fit.repository.PaymentRepository;
+import com.hubflow.fit.repository.ScheduleEventRepository;
 import com.hubflow.fit.repository.StudentRepository;
+import com.hubflow.fit.repository.WorkoutPlanRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,15 +23,27 @@ import java.util.UUID;
 public class StudentService {
 
     private final StudentRepository studentRepository;
+    private final AppUserRepository appUserRepository;
+    private final PaymentRepository paymentRepository;
+    private final ScheduleEventRepository scheduleEventRepository;
+    private final WorkoutPlanRepository workoutPlanRepository;
     private final ApiMapper apiMapper;
     private final CurrentUserService currentUserService;
 
     public StudentService(
             StudentRepository studentRepository,
+            AppUserRepository appUserRepository,
+            PaymentRepository paymentRepository,
+            ScheduleEventRepository scheduleEventRepository,
+            WorkoutPlanRepository workoutPlanRepository,
             ApiMapper apiMapper,
             CurrentUserService currentUserService
     ) {
         this.studentRepository = studentRepository;
+        this.appUserRepository = appUserRepository;
+        this.paymentRepository = paymentRepository;
+        this.scheduleEventRepository = scheduleEventRepository;
+        this.workoutPlanRepository = workoutPlanRepository;
         this.apiMapper = apiMapper;
         this.currentUserService = currentUserService;
     }
@@ -88,6 +104,16 @@ public class StudentService {
     public void delete(String id) {
         currentUserService.requireAdmin(currentUserService.requireCurrentUser());
         Student student = findEntity(parseId(id));
+        appUserRepository.findByLinkedStudentId(student.getId())
+                .ifPresent(appUserRepository::delete);
+        paymentRepository.deleteAll(
+                paymentRepository.findAllByStudentIdOrderByDueDateDesc(student.getId())
+        );
+        scheduleEventRepository.deleteAll(
+                scheduleEventRepository.findAllByStudentIdOrderByDateAscTimeAsc(student.getId())
+        );
+        workoutPlanRepository.findDistinctByAssignedStudents_Id(student.getId())
+                .forEach(workout -> workout.getAssignedStudents().remove(student));
         studentRepository.delete(student);
     }
 

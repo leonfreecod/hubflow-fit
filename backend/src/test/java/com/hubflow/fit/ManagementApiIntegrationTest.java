@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -105,6 +106,48 @@ class ManagementApiIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Transactional
+    void deletingStudentAlsoRemovesDependentRecordsAndPortalAccount() throws Exception {
+        String token = login("admin@hubflow.fit");
+        String studentsResponse = mockMvc.perform(get("/api/students")
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        JsonNode students = objectMapper.readTree(studentsResponse);
+        String marianaId = null;
+        for (JsonNode student : students) {
+            if ("mariana.costa@email.com".equals(student.path("email").asText())) {
+                marianaId = student.path("id").asText();
+                break;
+            }
+        }
+        if (marianaId == null) {
+            throw new AssertionError("Mariana seed was not found");
+        }
+
+        mockMvc.perform(delete("/api/students/{id}", marianaId)
+                        .header("Authorization", bearer(token)))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/payments").header("Authorization", bearer(token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.studentId == '%s')]".formatted(marianaId)).isEmpty());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "aluno@hubflow.fit",
+                                  "password": "hubflow123"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized());
     }
 
     private String login(String email) throws Exception {
