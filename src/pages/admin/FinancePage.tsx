@@ -16,8 +16,15 @@ export function FinancePage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [filter, setFilter] = useState<'ALL' | PaymentStatus>('ALL');
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ studentId: 'student-001', description: 'Mensalidade — agosto', amount: 289.9, dueDate: '2026-08-05', status: 'PENDING' as PaymentStatus, method: 'PIX' as Payment['method'] });
-  useEffect(() => { void repositories.students.findAll().then(setStudents); }, []);
+  const [form, setForm] = useState({ studentId: '', description: 'Mensalidade — agosto', amount: 289.9, dueDate: '2026-08-05', status: 'PENDING' as PaymentStatus, method: 'PIX' as Payment['method'] });
+  useEffect(() => {
+    void repositories.students.findAll().then((items) => {
+      setStudents(items);
+      setForm((current) => items.some((student) => student.id === current.studentId)
+        ? current
+        : { ...current, studentId: items[0]?.id ?? '' });
+    });
+  }, []);
 
   const paid = collection.items.filter((item) => item.status === 'PAID').reduce((sum, item) => sum + item.amount, 0);
   const pending = collection.items.filter((item) => item.status === 'PENDING').reduce((sum, item) => sum + item.amount, 0);

@@ -7,19 +7,23 @@ import type {
   WorkoutPlan,
 } from '../../domain/models';
 import {
+  monthlyRevenueSeed,
   organizationSeed,
   paymentsSeed,
   scheduleSeed,
   studentsSeed,
+  studentProgressSeed,
   usersSeed,
   workoutsSeed,
 } from '../../data/mocks/seed';
 import { readStorage, storageKeys, writeStorage } from '../storage/storage';
 import type {
   CrudRepository,
+  DashboardRepository,
   OrganizationRepository,
   UserRepository,
 } from './repositoryContracts';
+import { apiRepositories } from './apiRepositories';
 
 class LocalCrudRepository<T extends { id: string }> implements CrudRepository<T> {
   constructor(private readonly key: string, private readonly seed: T[]) {
@@ -87,14 +91,31 @@ class LocalOrganizationRepository implements OrganizationRepository {
   }
 }
 
-export const repositories = {
+class LocalDashboardRepository implements DashboardRepository {
+  async getMonthlyRevenue() {
+    return monthlyRevenueSeed;
+  }
+
+  async getStudentProgress() {
+    return studentProgressSeed;
+  }
+}
+
+export const localRepositories = {
   users: new LocalUserRepository(),
   students: new LocalCrudRepository<Student>(storageKeys.students, studentsSeed),
   payments: new LocalCrudRepository<Payment>(storageKeys.payments, paymentsSeed),
   schedule: new LocalCrudRepository<ScheduleEvent>(storageKeys.schedule, scheduleSeed),
   workouts: new LocalCrudRepository<WorkoutPlan>(storageKeys.workouts, workoutsSeed),
   organization: new LocalOrganizationRepository(),
+  dashboard: new LocalDashboardRepository(),
 };
+
+export const usesApiDataSource = import.meta.env.VITE_DATA_SOURCE === 'api';
+
+export const repositories = usesApiDataSource
+  ? apiRepositories
+  : localRepositories;
 
 export function resetDemoData(): void {
   writeStorage(storageKeys.users, usersSeed);

@@ -8,7 +8,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password: string;
+  /** Present only in the local demo repository; the API never returns passwords. */
+  password?: string;
   role: UserRole;
   avatar?: string;
   linkedStudentId?: string;

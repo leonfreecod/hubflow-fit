@@ -1,8 +1,10 @@
 import type {
+  MonthlyRevenue,
   OrganizationSettings,
   Payment,
   ScheduleEvent,
   Student,
+  StudentProgressPoint,
   User,
   WorkoutPlan,
 } from '../../domain/models';
@@ -28,4 +30,9 @@ export interface UserRepository {
 export interface OrganizationRepository {
   get(): Promise<OrganizationSettings>;
   save(settings: OrganizationSettings): Promise<OrganizationSettings>;
+}
+
+export interface DashboardRepository {
+  getMonthlyRevenue(): Promise<MonthlyRevenue[]>;
+  getStudentProgress(): Promise<StudentProgressPoint[]>;
 }

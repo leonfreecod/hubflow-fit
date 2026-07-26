@@ -77,10 +77,10 @@ Hook ou caso de uso da funcionalidade
         ↓
 Contrato de Repository
         ↓
-LocalStorage (MVP)
+LocalStorage ou API Spring Boot
 ```
 
-Na evolução full stack, a implementação local pode ser substituída por um `ApiStudentRepository`, `ApiPaymentRepository` etc., mantendo as páginas e componentes desacoplados da origem dos dados.
+O frontend seleciona a implementação local ou HTTP por `VITE_DATA_SOURCE`, mantendo as páginas e componentes desacoplados da origem dos dados.
 
 ## Tecnologias
 
@@ -91,6 +91,9 @@ Na evolução full stack, a implementação local pode ser substituída por um `
 - Lucide React;
 - CSS responsivo;
 - LocalStorage com repositories.
+- Java 21 + Spring Boot;
+- PostgreSQL/H2 e Flyway;
+- Spring Security com JWT.
 
 ## Como executar
 
@@ -100,6 +103,25 @@ npm run dev
 ```
 
 Acesse `http://localhost:5173`.
+
+### Executar com a API Spring Boot
+
+Inicie o backend com H2 para desenvolvimento:
+
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+Em outro terminal, crie `.env` a partir do exemplo e inicie o frontend:
+
+```bash
+cp .env.example .env
+npm run dev
+```
+
+Para executar backend e PostgreSQL em contêineres, use `docker compose up --build`
+na raiz. Consulte também [`backend/README.md`](backend/README.md).
 
 ### Build de produção
 
@@ -120,14 +142,11 @@ A linguagem visual é premium, escura e minimalista, sem replicar diretamente a 
 
 ## Próximas evoluções
 
-1. API Java + Spring Boot;
-2. PostgreSQL e Flyway;
-3. autenticação JWT e autorização por perfil;
-4. envio real de cobranças e integração PIX;
-5. comunicação entre treinador e aluno;
-6. upload e versionamento de treinos;
-7. indicadores em Power BI;
-8. deploy com Docker, Nginx e CI/CD.
+1. envio real de cobranças e integração PIX;
+2. comunicação entre treinador e aluno;
+3. upload e versionamento de treinos;
+4. indicadores em Power BI;
+5. deploy com Nginx e CI/CD.
 
 ## Aviso
 

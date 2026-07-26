@@ -14,9 +14,16 @@ export function SchedulePage() {
   const collection = useAsyncCollection(repositories.schedule);
   const [students, setStudents] = useState<Student[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ studentId: 'student-001', title: 'Treino individual', date: '2026-07-30', time: '07:00', durationMinutes: 60, location: 'Studio Hub', type: 'PERSONAL' as ScheduleEvent['type'] });
+  const [form, setForm] = useState({ studentId: '', title: 'Treino individual', date: '2026-07-30', time: '07:00', durationMinutes: 60, location: 'Studio Hub', type: 'PERSONAL' as ScheduleEvent['type'] });
 
-  useEffect(() => { void repositories.students.findAll().then(setStudents); }, []);
+  useEffect(() => {
+    void repositories.students.findAll().then((items) => {
+      setStudents(items);
+      setForm((current) => items.some((student) => student.id === current.studentId)
+        ? current
+        : { ...current, studentId: items[0]?.id ?? '' });
+    });
+  }, []);
   const sorted = useMemo(() => [...collection.items].sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)), [collection.items]);
 
   async function submit(event: React.FormEvent) {
