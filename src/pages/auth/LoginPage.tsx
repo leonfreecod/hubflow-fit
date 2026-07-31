@@ -26,8 +26,10 @@ export function LoginPage() {
     try {
       const ok = await login(email, password);
       if (!ok) setError('E-mail ou senha inválidos. Use uma das contas demonstrativas.');
-    } catch {
-      setError('Não foi possível conectar ao servidor. Tente novamente em instantes.');
+    } catch (cause) {
+      setError(cause instanceof Error
+        ? cause.message
+        : 'Não foi possível conectar ao servidor. Tente novamente em instantes.');
     } finally {
       setSubmitting(false);
     }

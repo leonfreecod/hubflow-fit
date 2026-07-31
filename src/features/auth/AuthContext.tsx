@@ -1,6 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from '../../domain/models';
-import { repositories } from '../../services/repositories/localRepositories';
+import {
+  repositories,
+  usesApiDataSource,
+} from '../../services/repositories/localRepositories';
 import { apiSession, apiUnauthorizedEvent } from '../../services/api/apiClient';
 import { readStorage, storageKeys, writeStorage } from '../../services/storage/storage';
 
@@ -21,10 +24,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const restore = async () => {
       try {
         const userId = readStorage<string | null>(storageKeys.session, null);
-        if (userId) setUser(await repositories.users.findById(userId));
+        const hasStoredSession = usesApiDataSource
+          ? Boolean(apiSession.getToken())
+          : Boolean(userId);
+
+        if (!hasStoredSession) {
+          localStorage.removeItem(storageKeys.session);
+          return;
+        }
+
+        const restoredUser = await repositories.users.findById(userId ?? '');
+        if (restoredUser) {
+          setUser(restoredUser);
+          writeStorage(storageKeys.session, restoredUser.id);
+          return;
+        }
+
+        if (usesApiDataSource) apiSession.clear();
+        localStorage.removeItem(storageKeys.session);
       } catch {
         setUser(null);
-        apiSession.clear();
+        if (usesApiDataSource) apiSession.clear();
         localStorage.removeItem(storageKeys.session);
       } finally {
         setLoading(false);

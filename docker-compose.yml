@@ -1,3 +1,6 @@
+# LEGADO: mantido temporariamente para não interromper fluxos existentes.
+# O ambiente Docker oficial é definido por ../docker-compose.yml e deve ser
+# iniciado a partir da raiz do projeto.
 services:
   postgres:
     image: postgres:16-alpine

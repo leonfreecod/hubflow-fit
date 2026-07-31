@@ -23,20 +23,40 @@ export function useAsyncCollection<T extends { id: string }>(repository: CrudRep
     void reload();
   }, [reload]);
 
+  const executeMutation = async (operation: () => Promise<unknown>) => {
+    setError(null);
+    try {
+      await operation();
+      await reload();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Não foi possível salvar os dados.');
+      throw cause;
+    }
+  };
+
   const create = async (entity: T) => {
-    await repository.create(entity);
-    await reload();
+    await executeMutation(() => repository.create(entity));
   };
 
   const update = async (entity: T) => {
-    await repository.update(entity);
-    await reload();
+    await executeMutation(() => repository.update(entity));
   };
 
   const remove = async (id: string) => {
-    await repository.remove(id);
-    await reload();
+    await executeMutation(() => repository.remove(id));
   };
 
-  return { items, loading, error, reload, create, update, remove };
+  const clearError = () => setError(null);
+
+  return {
+    items,
+    loading,
+    error,
+    reload,
+    create,
+    update,
+    remove,
+    mutate: executeMutation,
+    clearError,
+  };
 }

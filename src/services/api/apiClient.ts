@@ -1,4 +1,8 @@
-const apiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080/api').replace(/\/$/, '');
+const configuredApiUrl = (import.meta.env.VITE_API_URL ?? 'http://localhost:8080')
+  .replace(/\/+$/, '');
+const apiUrl = configuredApiUrl.endsWith('/api')
+  ? configuredApiUrl
+  : `${configuredApiUrl}/api`;
 const tokenKey = 'hubflow.api.token';
 export const apiUnauthorizedEvent = 'hubflow:api-unauthorized';
 
@@ -16,6 +20,19 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+function getErrorMessage(status: number, body: ApiErrorBody): string {
+  if (status === 400) {
+    const validationMessages = Object.values(body.fieldErrors ?? {});
+    if (validationMessages.length > 0) return validationMessages.join(' ');
+    return body.message ?? 'Revise os dados enviados e tente novamente.';
+  }
+
+  if (status === 401) return 'Sua sessão expirou ou as credenciais são inválidas.';
+  if (status === 403) return 'Você não tem permissão para executar esta operação.';
+  if (status >= 500) return 'A API encontrou um erro interno. Tente novamente em instantes.';
+  return body.message ?? `Erro HTTP ${status}.`;
 }
 
 export const apiSession = {
@@ -42,7 +59,13 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   const token = apiSession.getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
-  const response = await fetch(`${apiUrl}${path}`, { ...init, headers });
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl}${path}`, { ...init, headers });
+  } catch {
+    throw new ApiError(0, 'Não foi possível conectar à API. Verifique se o backend está ativo.');
+  }
+
   if (!response.ok) {
     let body: ApiErrorBody = {};
     try {
@@ -51,7 +74,11 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
       // Some infrastructure errors do not return JSON.
     }
     if (response.status === 401) apiSession.expire();
-    throw new ApiError(response.status, body.message ?? `Erro HTTP ${response.status}.`, body.fieldErrors);
+    throw new ApiError(
+      response.status,
+      getErrorMessage(response.status, body),
+      body.fieldErrors,
+    );
   }
 
   if (response.status === 204) return undefined as T;

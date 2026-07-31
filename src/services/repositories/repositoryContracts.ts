@@ -18,8 +18,12 @@ export interface CrudRepository<T> {
 }
 
 export type StudentRepository = CrudRepository<Student>;
-export type PaymentRepository = CrudRepository<Payment>;
-export type ScheduleRepository = CrudRepository<ScheduleEvent>;
+export interface PaymentRepository extends CrudRepository<Payment> {
+  markPaid(id: string): Promise<Payment>;
+}
+export interface ScheduleRepository extends CrudRepository<ScheduleEvent> {
+  complete(id: string): Promise<ScheduleEvent>;
+}
 export type WorkoutRepository = CrudRepository<WorkoutPlan>;
 
 export interface UserRepository {

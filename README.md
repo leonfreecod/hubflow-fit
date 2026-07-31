@@ -97,6 +97,8 @@ O frontend seleciona a implementação local ou HTTP por `VITE_DATA_SOURCE`, man
 
 ## Como executar
 
+### Frontend
+
 ```bash
 npm install
 npm run dev
@@ -104,24 +106,73 @@ npm run dev
 
 Acesse `http://localhost:5173`.
 
-### Executar com a API Spring Boot
+O frontend mantém as duas fontes de dados existentes. Para usar a API:
 
-Inicie o backend com H2 para desenvolvimento:
+```bash
+cp .env.example .env
+```
+
+Nesta etapa, `VITE_DATA_SOURCE=api` conecta autenticação, alunos, pagamentos,
+agenda e treinos ao backend:
+
+- `POST /api/auth/login` e `GET /api/auth/me`;
+- CRUD de `/api/students`.
+- CRUD de `/api/payments` e `PATCH /api/payments/{id}/pay`.
+- CRUD de `/api/schedule` e `PATCH /api/schedule/{id}/complete`.
+- CRUD de `/api/workouts`.
+
+Organização e dashboard continuam usando seus repositories LocalStorage. O
+cliente HTTP usa `VITE_API_URL=http://localhost:8080` e
+acrescenta o prefixo `/api` centralmente.
+
+Sem um arquivo `.env`, ou com `VITE_DATA_SOURCE=local`, toda a aplicação
+continua no modo demonstrativo LocalStorage.
+
+### Backend local com H2
+
+O perfil Spring padrão continua sendo `dev` e usa H2:
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-Em outro terminal, crie `.env` a partir do exemplo e inicie o frontend:
+### Ambiente Docker oficial
+
+O único Compose oficial fica na raiz do projeto, um nível acima deste
+diretório. Ele inicia PostgreSQL e o backend existente. A partir da raiz:
 
 ```bash
 cp .env.example .env
-npm run dev
+# Edite .env e defina uma senha local forte.
+docker compose up -d --build
 ```
 
-Para executar backend e PostgreSQL em contêineres, use `docker compose up --build`
-na raiz. Consulte também [`backend/README.md`](backend/README.md).
+O PostgreSQL fica disponível no host em `localhost:5433`; dentro da rede
+Docker, o backend usa `jdbc:postgresql://postgres:5432/hubflow`. O Compose
+define `DATABASE_USERNAME=hubflow_user` e mapeia `DB_PASSWORD` do `.env` para
+`DATABASE_PASSWORD`. O serviço do backend só é iniciado depois que o
+healthcheck do PostgreSQL estiver saudável.
+
+O perfil `docker` executa automaticamente as migrations Flyway e carrega os
+dados demonstrativos. Para verificar o ambiente:
+
+```bash
+docker compose ps
+docker compose logs backend
+docker exec -it hubflow-db psql -U hubflow_user -d hubflow -c '\dt'
+```
+
+Para encerrar sem apagar os dados:
+
+```bash
+docker compose down
+```
+
+O arquivo `docker-compose.yml` deste diretório está marcado como legado e foi
+preservado apenas para não quebrar fluxos antigos. Novos usos devem executar
+exclusivamente o Compose da raiz. Consulte também
+[`backend/README.md`](backend/README.md).
 
 ### Build de produção
 

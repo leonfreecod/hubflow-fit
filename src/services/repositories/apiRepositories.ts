@@ -1,18 +1,15 @@
 import type {
-  MonthlyRevenue,
-  OrganizationSettings,
   Payment,
   ScheduleEvent,
   Student,
-  StudentProgressPoint,
   User,
   WorkoutPlan,
 } from '../../domain/models';
 import { ApiError, apiRequest, apiSession } from '../api/apiClient';
 import type {
   CrudRepository,
-  DashboardRepository,
-  OrganizationRepository,
+  PaymentRepository,
+  ScheduleRepository,
   UserRepository,
 } from './repositoryContracts';
 
@@ -22,14 +19,21 @@ interface AuthResponse {
 }
 
 class ApiCrudRepository<T extends { id: string }> implements CrudRepository<T> {
-  constructor(private readonly endpoint: string) {}
+  constructor(
+    private readonly endpoint: string,
+    private readonly toRequestBody: (entity: T) => unknown = (entity) => entity,
+  ) {}
+
+  protected itemPath(id: string): string {
+    return `${this.endpoint}/${encodeURIComponent(id)}`;
+  }
 
   findAll(): Promise<T[]> {
     return apiRequest<T[]>(this.endpoint);
   }
 
   findById(id: string): Promise<T | null> {
-    return apiRequest<T>(`${this.endpoint}/${encodeURIComponent(id)}`)
+    return apiRequest<T>(this.itemPath(id))
       .catch((error: unknown) => {
         if (error instanceof ApiError && error.status === 404) return null;
         throw error;
@@ -39,22 +43,88 @@ class ApiCrudRepository<T extends { id: string }> implements CrudRepository<T> {
   create(entity: T): Promise<T> {
     return apiRequest<T>(this.endpoint, {
       method: 'POST',
-      body: JSON.stringify(entity),
+      body: JSON.stringify(this.toRequestBody(entity)),
     });
   }
 
   update(entity: T): Promise<T> {
-    return apiRequest<T>(`${this.endpoint}/${encodeURIComponent(entity.id)}`, {
+    return apiRequest<T>(this.itemPath(entity.id), {
       method: 'PUT',
-      body: JSON.stringify(entity),
+      body: JSON.stringify(this.toRequestBody(entity)),
     });
   }
 
   remove(id: string): Promise<void> {
-    return apiRequest<void>(`${this.endpoint}/${encodeURIComponent(id)}`, {
+    return apiRequest<void>(this.itemPath(id), {
       method: 'DELETE',
     });
   }
+}
+
+function toPaymentRequest(payment: Payment) {
+  return {
+    studentId: payment.studentId,
+    description: payment.description,
+    amount: payment.amount,
+    dueDate: payment.dueDate,
+    paidAt: payment.paidAt,
+    status: payment.status,
+    method: payment.method,
+  };
+}
+
+class ApiPaymentRepository
+  extends ApiCrudRepository<Payment>
+  implements PaymentRepository {
+  constructor() {
+    super('/payments', toPaymentRequest);
+  }
+
+  markPaid(id: string): Promise<Payment> {
+    return apiRequest<Payment>(`${this.itemPath(id)}/pay`, {
+      method: 'PATCH',
+    });
+  }
+}
+
+function toScheduleEventRequest(event: ScheduleEvent) {
+  return {
+    studentId: event.studentId,
+    title: event.title,
+    date: event.date,
+    time: event.time,
+    durationMinutes: event.durationMinutes,
+    location: event.location,
+    status: event.status,
+    type: event.type,
+  };
+}
+
+class ApiScheduleRepository
+  extends ApiCrudRepository<ScheduleEvent>
+  implements ScheduleRepository {
+  constructor() {
+    super('/schedule', toScheduleEventRequest);
+  }
+
+  complete(id: string): Promise<ScheduleEvent> {
+    return apiRequest<ScheduleEvent>(`${this.itemPath(id)}/complete`, {
+      method: 'PATCH',
+    });
+  }
+}
+
+function toWorkoutPlanRequest(plan: WorkoutPlan) {
+  return {
+    name: plan.name,
+    objective: plan.objective,
+    level: plan.level,
+    weeks: plan.weeks,
+    sessionsPerWeek: plan.sessionsPerWeek,
+    assignedStudentIds: plan.assignedStudentIds,
+    updatedAt: plan.updatedAt,
+    description: plan.description,
+  };
 }
 
 class ApiUserRepository implements UserRepository {
@@ -83,35 +153,10 @@ class ApiUserRepository implements UserRepository {
   }
 }
 
-class ApiOrganizationRepository implements OrganizationRepository {
-  get(): Promise<OrganizationSettings> {
-    return apiRequest<OrganizationSettings>('/organization');
-  }
-
-  save(settings: OrganizationSettings): Promise<OrganizationSettings> {
-    return apiRequest<OrganizationSettings>('/organization', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    });
-  }
-}
-
-class ApiDashboardRepository implements DashboardRepository {
-  getMonthlyRevenue(): Promise<MonthlyRevenue[]> {
-    return apiRequest<MonthlyRevenue[]>('/dashboard/monthly-revenue');
-  }
-
-  getStudentProgress(): Promise<StudentProgressPoint[]> {
-    return apiRequest<StudentProgressPoint[]>('/dashboard/student-progress');
-  }
-}
-
 export const apiRepositories = {
   users: new ApiUserRepository(),
   students: new ApiCrudRepository<Student>('/students'),
-  payments: new ApiCrudRepository<Payment>('/payments'),
-  schedule: new ApiCrudRepository<ScheduleEvent>('/schedule'),
-  workouts: new ApiCrudRepository<WorkoutPlan>('/workouts'),
-  organization: new ApiOrganizationRepository(),
-  dashboard: new ApiDashboardRepository(),
+  payments: new ApiPaymentRepository(),
+  schedule: new ApiScheduleRepository(),
+  workouts: new ApiCrudRepository<WorkoutPlan>('/workouts', toWorkoutPlanRequest),
 };

@@ -21,6 +21,8 @@ import type {
   CrudRepository,
   DashboardRepository,
   OrganizationRepository,
+  PaymentRepository,
+  ScheduleRepository,
   UserRepository,
 } from './repositoryContracts';
 import { apiRepositories } from './apiRepositories';
@@ -74,6 +76,33 @@ class LocalUserRepository implements UserRepository {
   }
 }
 
+class LocalPaymentRepository
+  extends LocalCrudRepository<Payment>
+  implements PaymentRepository {
+  async markPaid(id: string): Promise<Payment> {
+    const payment = await this.findById(id);
+    if (!payment) throw new Error('Pagamento não encontrado.');
+    return this.update({
+      ...payment,
+      status: 'PAID',
+      paidAt: payment.paidAt ?? new Date().toISOString().slice(0, 10),
+    });
+  }
+}
+
+class LocalScheduleRepository
+  extends LocalCrudRepository<ScheduleEvent>
+  implements ScheduleRepository {
+  async complete(id: string): Promise<ScheduleEvent> {
+    const event = await this.findById(id);
+    if (!event) throw new Error('Evento não encontrado.');
+    return this.update({
+      ...event,
+      status: 'COMPLETED',
+    });
+  }
+}
+
 class LocalOrganizationRepository implements OrganizationRepository {
   constructor() {
     if (!localStorage.getItem(storageKeys.organization)) {
@@ -104,8 +133,8 @@ class LocalDashboardRepository implements DashboardRepository {
 export const localRepositories = {
   users: new LocalUserRepository(),
   students: new LocalCrudRepository<Student>(storageKeys.students, studentsSeed),
-  payments: new LocalCrudRepository<Payment>(storageKeys.payments, paymentsSeed),
-  schedule: new LocalCrudRepository<ScheduleEvent>(storageKeys.schedule, scheduleSeed),
+  payments: new LocalPaymentRepository(storageKeys.payments, paymentsSeed),
+  schedule: new LocalScheduleRepository(storageKeys.schedule, scheduleSeed),
   workouts: new LocalCrudRepository<WorkoutPlan>(storageKeys.workouts, workoutsSeed),
   organization: new LocalOrganizationRepository(),
   dashboard: new LocalDashboardRepository(),
@@ -114,7 +143,14 @@ export const localRepositories = {
 export const usesApiDataSource = import.meta.env.VITE_DATA_SOURCE === 'api';
 
 export const repositories = usesApiDataSource
-  ? apiRepositories
+  ? {
+      ...localRepositories,
+      users: apiRepositories.users,
+      students: apiRepositories.students,
+      payments: apiRepositories.payments,
+      schedule: apiRepositories.schedule,
+      workouts: apiRepositories.workouts,
+    }
   : localRepositories;
 
 export function resetDemoData(): void {

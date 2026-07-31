@@ -27,15 +27,29 @@ mvn test
 
 ## Backend e PostgreSQL com Docker
 
-Na raiz do repositório:
+O ambiente oficial é o arquivo `docker-compose.yml` da raiz do projeto
+(`../../docker-compose.yml` a partir deste diretório). Na raiz:
 
 ```bash
-docker compose up --build
+cp .env.example .env
+# Edite .env e substitua o valor de DB_PASSWORD.
+docker compose up -d --build
 ```
 
-Esse comando inicia apenas o PostgreSQL e o backend com o perfil local
-`docker`, incluindo as contas e os dados demonstrativos. O frontend continua
-sendo executado separadamente a partir da raiz. Para encerrar os contêineres:
+Esse comando constrói o backend existente, inicia PostgreSQL e API com o perfil
+`docker`, aguarda o healthcheck do banco e executa automaticamente as
+migrations Flyway. O frontend continua sendo executado separadamente.
+
+O Compose interno em `../docker-compose.yml` está marcado como legado e não é
+mais a fonte principal do ambiente. Para verificar a inicialização:
+
+```bash
+docker compose ps
+docker compose logs backend
+docker exec -it hubflow-db psql -U hubflow_user -d hubflow -c '\dt'
+```
+
+Para encerrar os contêineres:
 
 ```bash
 docker compose down
@@ -44,16 +58,11 @@ docker compose down
 Os dados do PostgreSQL ficam no volume nomeado
 `hubflow_postgres_data`. `docker compose down` preserva esse volume.
 
-Os valores padrão do Compose são adequados apenas para desenvolvimento local.
-Antes de usar a imagem em outro ambiente, defina senhas e segredo JWT próprios.
-
-Exemplo:
-
-```bash
-export HUBFLOW_POSTGRES_PASSWORD='uma-senha-forte'
-export HUBFLOW_JWT_SECRET='um-segredo-longo-e-aleatorio-com-pelo-menos-32-bytes'
-docker compose up --build
-```
+No ambiente oficial, o PostgreSQL usa banco `hubflow`, usuário
+`hubflow_user`, porta interna `5432` e porta `5433` no host. A senha não fica
+no Compose: `DB_PASSWORD` é lida do `.env` da raiz e repassada ao Spring como
+`DATABASE_PASSWORD`. O perfil H2 padrão permanece disponível para
+desenvolvimento local.
 
 ## Empacotamento e execução em produção
 
@@ -69,7 +78,7 @@ Depois configure o ambiente e execute o JAR:
 ```bash
 export SPRING_PROFILES_ACTIVE=prod
 export DATABASE_URL='jdbc:postgresql://localhost:5432/hubflow'
-export DATABASE_USERNAME='hubflow'
+export DATABASE_USERNAME='hubflow_user'
 export DATABASE_PASSWORD='uma-senha-forte'
 export JWT_SECRET='um-segredo-longo-e-aleatorio-com-pelo-menos-32-bytes'
 export CORS_ALLOWED_ORIGIN='https://app.exemplo.com'
@@ -85,27 +94,19 @@ configurar opções da JVM sem alterar a imagem.
 | Variável | Padrão | Uso |
 | --- | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | `dev` | `docker` no Compose; use `prod` em produção |
-| `DATABASE_URL` | `jdbc:postgresql://localhost:5432/hubflow` no perfil `prod` | URL JDBC |
-| `DATABASE_USERNAME` | `hubflow` | Usuário do banco |
-| `DATABASE_PASSWORD` | `hubflow` | Senha do banco; deve ser alterada fora do ambiente local |
+| `DATABASE_URL` | definida pelo Compose no perfil `docker` | URL JDBC |
+| `DATABASE_USERNAME` | `hubflow_user` no Compose oficial | Usuário do banco |
+| `DATABASE_PASSWORD` | valor de `DB_PASSWORD` no Compose oficial | Senha do banco |
 | `JWT_SECRET` | segredo somente nos perfis locais | Obrigatório em `prod`; use um valor longo e aleatório |
 | `JWT_EXPIRATION_MINUTES` | `480` | Validade do token em minutos |
 | `CORS_ALLOWED_ORIGIN` | `http://localhost:5173` | Origem permitida para o frontend |
 | `PORT` | `8080` | Porta HTTP da API |
 | `JAVA_TOOL_OPTIONS` | vazio | Opções adicionais da JVM |
 
-## Variáveis do Docker Compose
+## Variável do Docker Compose oficial
 
-As variáveis abaixo configuram os contêineres e têm o prefixo `HUBFLOW_` para
-não conflitar com variáveis do frontend:
+O `.env` da raiz contém apenas a credencial necessária ao ambiente Docker:
 
-| Variável | Padrão |
-| --- | --- |
-| `HUBFLOW_POSTGRES_DB` | `hubflow` |
-| `HUBFLOW_POSTGRES_USER` | `hubflow` |
-| `HUBFLOW_POSTGRES_PASSWORD` | `hubflow_dev` |
-| `HUBFLOW_POSTGRES_PORT` | `5432` |
-| `HUBFLOW_BACKEND_PORT` | `8080` |
-| `HUBFLOW_JWT_SECRET` | segredo somente para desenvolvimento local |
-| `HUBFLOW_JWT_EXPIRATION_MINUTES` | `480` |
-| `HUBFLOW_CORS_ALLOWED_ORIGIN` | `http://localhost:5173` |
+| Variável | Padrão | Uso |
+| --- | --- | --- |
+| `DB_PASSWORD` | sem padrão | Senha compartilhada pelo PostgreSQL e pelo backend |
