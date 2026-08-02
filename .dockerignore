@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.idea
+.env
+.env.*
+!.env.example
+backend
+backend/target
+backend/data
+npm-debug.log*

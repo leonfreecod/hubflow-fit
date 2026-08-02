@@ -1,201 +1,145 @@
 # HubFlow Fit
 
-MVP de uma plataforma de gestão para treinadores e assessorias esportivas. A aplicação centraliza alunos, agenda, planos de treino e pagamentos — atividades que normalmente ficam espalhadas entre WhatsApp, Excel, Google Agenda, PDFs e PIX.
+Plataforma de gestão para treinadores e assessorias esportivas. O HubFlow Fit reúne alunos, agenda, treinos, cobranças e portal do aluno em uma aplicação React conectada a uma API Spring Boot multiempresa.
 
-## Problema
-
-Muitos treinadores administram o negócio com ferramentas desconectadas:
-
-- WhatsApp para comunicação;
-- Excel para pagamentos;
-- Google Agenda para horários;
-- PDFs para prescrição de treino;
-- PIX para recebimentos.
-
-O HubFlow organiza esse fluxo em uma experiência única para **administradores** e **alunos**.
-
-## Funcionalidades
+## O que está implementado
 
 ### Administrador
 
-- dashboard com indicadores e gráficos;
-- cadastro, edição, busca e remoção de alunos;
-- agenda de sessões, avaliações e treinos em grupo;
-- criação de planos de treino e vínculo com alunos;
-- controle de cobranças, pagamentos e inadimplência;
-- configurações da assessoria;
-- restauração dos dados demonstrativos.
+- dashboard calculado a partir dos dados da organização;
+- CRUD, busca e convite de alunos;
+- cobranças com regras de vencimento, baixa e geração de PIX simulado;
+- agenda com recorrência, conflito de horários, cancelamento e conclusão;
+- planos de treino estruturados em sessões e exercícios;
+- configurações da organização;
+- isolamento de dados por organização em todos os serviços.
 
 ### Aluno
 
-- painel pessoal de evolução;
-- acesso aos programas de treino;
+- painel pessoal, perfil e progresso;
 - agenda individual;
-- mensalidade, chave PIX e histórico de pagamentos;
-- edição de dados pessoais e objetivo.
+- treinos prescritos e conclusão de sessões;
+- histórico financeiro e geração de cobrança PIX simulada;
+- ativação por convite e redefinição de senha.
 
-## Contas demonstrativas
+### Segurança e operação
 
-| Perfil | E-mail | Senha |
-|---|---|---|
+- sessão JWT em cookie `HttpOnly`, `SameSite=Strict` e `Secure` em produção;
+- proteção CSRF para mutações autenticadas por cookie;
+- rate limit de tentativas de login;
+- tokens de convite/redefinição com validade e uso único;
+- migrations Flyway V1–V7 e validação de esquema pelo Hibernate;
+- healthchecks, imagens sem usuário root, perfis demo/produção separados;
+- OpenAPI no desenvolvimento, CI, testes unitários, integração e E2E.
+
+## Limites das integrações atuais
+
+O PIX é uma implementação local simulada, identificada dessa forma na interface. Notificações de convite/lembrete são enviadas a uma porta desacoplada que, no perfil demo, registra os links no log. A agenda também usa um gateway local. As interfaces `PixProvider`, `NotificationGateway` e `CalendarGateway` são os pontos de extensão para provedores reais; nenhum deles deve ser tratado como integração financeira, e-mail ou calendário de produção.
+
+## Início rápido com Docker
+
+Requisitos: Docker Engine com Compose v2. A pilha completa expõe frontend, API e PostgreSQL.
+
+```bash
+cp .env.example .env
+# Substitua DB_PASSWORD, JWT_SECRET e PIX_WEBHOOK_SECRET.
+docker compose up -d --build --wait
+```
+
+Acesse:
+
+- aplicação: `http://localhost:5173`;
+- API: `http://localhost:8080/api`;
+- saúde: `http://localhost:8080/actuator/health`;
+- OpenAPI: `http://localhost:8080/swagger-ui/index.html`;
+- PostgreSQL: `localhost:5433`.
+
+Contas criadas somente pelo perfil `demo`:
+
+| Perfil        | E-mail              | Senha        |
+| ------------- | ------------------- | ------------ |
 | Administrador | `admin@hubflow.fit` | `hubflow123` |
-| Aluno | `aluno@hubflow.fit` | `hubflow123` |
+| Aluno         | `aluno@hubflow.fit` | `hubflow123` |
 
-## Arquitetura
-
-O projeto foi criado em módulos desde o início, evitando uma aplicação concentrada em um único arquivo.
-
-```text
-src/
-├── app/                    # Inicialização e rotas
-├── components/
-│   ├── navigation/         # Sidebar e Topbar
-│   └── ui/                 # Button, Card, Badge, Modal...
-├── config/                 # Nome e branding centralizados
-├── data/mocks/             # Dados demonstrativos
-├── domain/                 # Entidades e tipos de negócio
-├── features/auth/          # Sessão, login e proteção de rotas
-├── hooks/                  # Hooks reutilizáveis
-├── layouts/                # Layout da área autenticada
-├── pages/
-│   ├── admin/              # Páginas do treinador/assessoria
-│   ├── auth/               # Login
-│   └── student/            # Portal do aluno
-├── services/
-│   ├── repositories/       # Contratos e implementações de dados
-│   └── storage/            # Persistência local
-├── styles/                 # Design system e responsividade
-└── utils/                  # Formatação pt-BR
-```
-
-### Fluxo de dados
-
-```text
-Página / Componente
-        ↓
-Hook ou caso de uso da funcionalidade
-        ↓
-Contrato de Repository
-        ↓
-LocalStorage ou API Spring Boot
-```
-
-O frontend seleciona a implementação local ou HTTP por `VITE_DATA_SOURCE`, mantendo as páginas e componentes desacoplados da origem dos dados.
-
-## Tecnologias
-
-- React + TypeScript;
-- Vite;
-- React Router;
-- Recharts;
-- Lucide React;
-- CSS responsivo;
-- LocalStorage com repositories.
-- Java 21 + Spring Boot;
-- PostgreSQL/H2 e Flyway;
-- Spring Security com JWT.
-
-## Como executar
-
-### Frontend
-
-```bash
-npm install
-npm run dev
-```
-
-Acesse `http://localhost:5173`.
-
-O frontend mantém as duas fontes de dados existentes. Para usar a API:
-
-```bash
-cp .env.example .env
-```
-
-Nesta etapa, `VITE_DATA_SOURCE=api` conecta autenticação, alunos, pagamentos,
-agenda e treinos ao backend:
-
-- `POST /api/auth/login` e `GET /api/auth/me`;
-- CRUD de `/api/students`.
-- CRUD de `/api/payments` e `PATCH /api/payments/{id}/pay`.
-- CRUD de `/api/schedule` e `PATCH /api/schedule/{id}/complete`.
-- CRUD de `/api/workouts`.
-
-Organização e dashboard continuam usando seus repositories LocalStorage. O
-cliente HTTP usa `VITE_API_URL=http://localhost:8080` e
-acrescenta o prefixo `/api` centralmente.
-
-Sem um arquivo `.env`, ou com `VITE_DATA_SOURCE=local`, toda a aplicação
-continua no modo demonstrativo LocalStorage.
-
-### Backend local com H2
-
-O perfil Spring padrão continua sendo `dev` e usa H2:
-
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-### Ambiente Docker oficial
-
-O Compose oficial é versionado em `docker-compose.yml`, na raiz deste
-repositório. Ele inicia PostgreSQL e o backend. A partir da raiz:
-
-```bash
-cp .env.example .env
-# Edite .env e defina uma senha local forte.
-docker compose up -d --build
-```
-
-O PostgreSQL fica disponível no host em `localhost:5433`; dentro da rede
-Docker, o backend usa `jdbc:postgresql://postgres:5432/hubflow`. O Compose
-define `DATABASE_USERNAME=hubflow_user` e mapeia `DB_PASSWORD` do `.env` para
-`DATABASE_PASSWORD`. O serviço do backend só é iniciado depois que o
-healthcheck do PostgreSQL estiver saudável.
-
-O perfil `docker` executa automaticamente as migrations Flyway e carrega os
-dados demonstrativos. Para verificar o ambiente:
-
-```bash
-docker compose ps
-docker compose logs backend
-docker exec -it hubflow-db psql -U hubflow_user -d hubflow -c '\dt'
-```
-
-Para encerrar sem apagar os dados:
+Para encerrar preservando o banco:
 
 ```bash
 docker compose down
 ```
 
-Consulte também [`backend/README.md`](backend/README.md).
+`docker compose down --volumes` também remove definitivamente o volume PostgreSQL.
 
-### Build de produção
+> Se `DB_PASSWORD` mudar depois da primeira inicialização, o PostgreSQL continuará com a credencial gravada no volume existente. Atualize a senha no banco ou recrie deliberadamente o volume apenas quando os dados puderem ser descartados.
+
+## Desenvolvimento local
+
+Requisitos: Node.js 24, JDK 21 e Maven 3.9+.
+
+### Frontend
 
 ```bash
-npm run build
-npm run preview
+npm ci
+cp .env.example .env
+npm run dev
 ```
 
-## Identidade visual
+O modo recomendado é `VITE_DATA_SOURCE=api`. `VITE_API_URL` pode apontar para `http://localhost:8080` no Vite ou ser `/api` quando servido pelo Nginx do projeto. A implementação LocalStorage continua disponível com `VITE_DATA_SOURCE=local`, exclusivamente para prototipação sem backend.
 
-- Background: `#111111`
-- Cards: `#1A1A1A`
-- Amarelo principal: `#FFD54A`
-- Texto: `#F5F5F5`
-- Cinza: `#808080`
+### Backend com H2
 
-A linguagem visual é premium, escura e minimalista, sem replicar diretamente a identidade de academias existentes.
+O perfil padrão `dev,demo` usa H2 persistente em `backend/data/`:
 
-## Próximas evoluções
+```bash
+mvn -f backend/pom.xml spring-boot:run
+```
 
-1. envio real de cobranças e integração PIX;
-2. comunicação entre treinador e aluno;
-3. upload e versionamento de treinos;
-4. indicadores em Power BI;
-5. deploy com Nginx e CI/CD.
+Para trabalhar com PostgreSQL, prefira a pilha Docker completa. A API e os detalhes dos perfis estão em [backend/README.md](backend/README.md).
 
-## Aviso
+## Verificações
 
-Projeto fictício para portfólio. Dados, pessoas e organização são demonstrativos.
+```bash
+npm run check             # lint + TypeScript + Vitest + build
+npm run test:coverage     # relatório em coverage/
+mvn -f backend/pom.xml verify
+npm run e2e               # requer a pilha em localhost:5173
+```
+
+O E2E Chromium percorre CRUD de alunos, pagamentos, agenda e treinos contra a API e o PostgreSQL reais. O teste `PostgresMigrationTest` usa Testcontainers e é ignorado automaticamente quando nenhum daemon compatível está disponível. O workflow em `.github/workflows/ci.yml` executa as três frentes em cada pull request e push na `main`.
+
+## Produção
+
+O arquivo de produção não ativa seed demo, não publica o PostgreSQL, desabilita Swagger e exige cookies seguros.
+
+```bash
+cp .env.prod.example .env.prod
+# Preencha os segredos e use uma origem HTTPS real.
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build --wait
+```
+
+Coloque um proxy reverso com TLS na frente da porta `APP_PORT`. `APP_ORIGIN` deve coincidir exatamente com a origem pública HTTPS. Nunca use as credenciais demonstrativas nem os valores de exemplo em produção.
+
+Consulte [docs/operations.md](docs/operations.md) para deploy, atualização, observabilidade, backup, restauração e resposta a incidentes.
+
+## Arquitetura
+
+```text
+Navegador React
+  └── repositories tipados
+        └── Nginx /api
+              └── Spring Security + controllers
+                    └── services com escopo de organização
+                          └── JPA / Flyway / PostgreSQL
+```
+
+- `src/`: aplicação React, componentes, páginas, repositories e testes;
+- `backend/src/main/java`: API, segurança, domínio e integrações;
+- `backend/src/main/resources/db/migration`: histórico imutável do banco;
+- `e2e/`: smoke test do fluxo administrativo;
+- `scripts/`: backup e restauração PostgreSQL;
+- `.github/`: CI e atualizações automatizadas de dependências.
+
+## Qualidade ainda incremental
+
+A cobertura unitária do frontend começou pelos utilitários, modal e cliente HTTP; o E2E protege o caminho crítico completo. Novas regras devem vir acompanhadas de testes unitários ou de integração e a cobertura deve crescer sem reduzir a proteção existente.
+
+Projeto fictício para portfólio. Dados, pessoas, organizações e cobranças demonstrativas não representam operações reais.
