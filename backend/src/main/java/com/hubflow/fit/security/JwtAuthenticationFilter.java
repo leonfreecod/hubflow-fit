@@ -22,10 +22,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final AuthCookieService authCookieService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            UserDetailsService userDetailsService,
+            AuthCookieService authCookieService
+    ) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.authCookieService = authCookieService;
     }
 
     @Override
@@ -35,6 +41,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
         String token = resolveBearerToken(request);
+        if (token == null) {
+            token = authCookieService.resolve(request);
+        }
 
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             authenticateRequest(token, request);

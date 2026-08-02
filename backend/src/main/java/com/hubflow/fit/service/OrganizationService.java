@@ -27,23 +27,25 @@ public class OrganizationService {
 
     @Transactional(readOnly = true)
     public OrganizationSettingsResponse get() {
-        currentUserService.requireCurrentUser();
-        return apiMapper.toResponse(findSettings());
+        var currentUser = currentUserService.requireCurrentUser();
+        return apiMapper.toResponse(findSettings(
+                currentUserService.requireOrganizationId(currentUser)
+        ));
     }
 
     @Transactional
     public OrganizationSettingsResponse update(OrganizationSettingsRequest request) {
-        currentUserService.requireAdmin(currentUserService.requireCurrentUser());
-        OrganizationSettings settings = organizationSettingsRepository.findAll().stream()
-                .findFirst()
-                .orElseGet(() -> apiMapper.toEntity(request));
+        var currentUser = currentUserService.requireCurrentUser();
+        currentUserService.requireAdmin(currentUser);
+        OrganizationSettings settings = findSettings(
+                currentUserService.requireOrganizationId(currentUser)
+        );
         apiMapper.updateEntity(settings, request);
         return apiMapper.toResponse(organizationSettingsRepository.save(settings));
     }
 
-    private OrganizationSettings findSettings() {
-        return organizationSettingsRepository.findAll().stream()
-                .findFirst()
+    private OrganizationSettings findSettings(java.util.UUID organizationId) {
+        return organizationSettingsRepository.findById(organizationId)
                 .orElseThrow(() ->
                         new NotFoundException("Configurações da organização não encontradas.")
                 );

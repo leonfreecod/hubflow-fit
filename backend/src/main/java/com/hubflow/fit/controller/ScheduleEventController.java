@@ -57,6 +57,11 @@ public class ScheduleEventController {
         return scheduleEventService.complete(id);
     }
 
+    @PatchMapping("/{id}/cancel")
+    public ScheduleEventResponse cancel(@PathVariable String id) {
+        return scheduleEventService.cancel(id);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {

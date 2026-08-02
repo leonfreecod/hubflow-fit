@@ -1,112 +1,88 @@
 # HubFlow Fit API
 
-API do HubFlow Fit construída com Java 21, Spring Boot, Maven, Flyway e
-PostgreSQL. O frontend React permanece na raiz do repositório.
+API multiempresa em Java 21, Spring Boot 3.5, Spring Security, JPA, Flyway e PostgreSQL/H2.
 
-## Requisitos
+## Perfis
 
-- JDK 21
-- Maven 3.9+
-- Docker com Docker Compose (para a execução em contêineres)
+| Perfil   | Banco/efeito                                                        | Uso                                                  |
+| -------- | ------------------------------------------------------------------- | ---------------------------------------------------- |
+| `dev`    | H2 persistente                                                      | desenvolvimento local                                |
+| `demo`   | cria organização, usuários e dados fictícios; registra links no log | demonstração, sempre combinado com `dev` ou `docker` |
+| `docker` | PostgreSQL configurado por ambiente                                 | Compose local                                        |
+| `prod`   | PostgreSQL obrigatório, cookie seguro, Swagger e seed desativados   | produção                                             |
+| `test`   | H2 isolado                                                          | testes automatizados                                 |
 
-## Desenvolvimento local
+O padrão é `dev,demo`. O Compose local ativa `docker,demo`; o Compose de produção ativa apenas `prod`.
 
-O perfil padrão é `dev` e usa um banco H2 persistido em `backend/data/`.
+## Execução local
 
 ```bash
-cd backend
 mvn spring-boot:run
 ```
 
-A API fica disponível em `http://localhost:8080`. Para executar os testes:
+A API sobe em `http://localhost:8080`, aplica as migrations e expõe:
+
+- saúde: `/actuator/health`;
+- especificação: `/v3/api-docs`;
+- interface: `/swagger-ui/index.html`.
+
+O perfil `prod` desabilita os dois endpoints do Springdoc.
+
+## Autenticação
+
+O login retorna os dados do usuário e grava o JWT no cookie `hubflow_session`. O token não é persistido no LocalStorage. Requisições inseguras autenticadas por cookie precisam enviar o cookie `XSRF-TOKEN` também no cabeçalho `X-XSRF-TOKEN`; o frontend faz essa sincronização antes de cada mutação.
+
+O backend ainda aceita Bearer JWT para clientes não baseados em navegador. Login tem limitação de tentativas em memória. Convites e redefinições usam tokens aleatórios armazenados somente como hash, com expiração e uso único.
+
+## Recursos HTTP
+
+| Prefixo                   | Responsabilidade                              |
+| ------------------------- | --------------------------------------------- |
+| `/api/auth`               | login, sessão, CSRF, logout, ativação e senha |
+| `/api/students`           | alunos e convites                             |
+| `/api/payments`           | cobranças, baixa e PIX simulado               |
+| `/api/schedule`           | agenda, recorrência e transições              |
+| `/api/workouts`           | planos, sessões, exercícios e conclusões      |
+| `/api/organization`       | configurações da organização                  |
+| `/api/dashboard`          | receita e progresso                           |
+| `/api/webhooks/pix/local` | webhook idempotente do provedor PIX local     |
+
+Administradores acessam apenas a própria organização. Alunos veem e alteram apenas os recursos associados ao próprio cadastro. Validações de domínio impedem, entre outros casos, cobrança não positiva, pagamento futuro, conflitos de agenda e transições inválidas.
+
+## Testes e cobertura
 
 ```bash
-cd backend
 mvn test
+mvn verify
 ```
 
-## Backend e PostgreSQL com Docker
+`verify` executa testes de contexto e integração, gera `target/site/jacoco/index.html` e, quando Docker compatível está disponível, valida V1–V7 em PostgreSQL real via Testcontainers. Sem Docker, apenas esse teste é marcado como ignorado.
 
-O ambiente oficial é o arquivo `docker-compose.yml` da raiz do projeto
-(`../docker-compose.yml` a partir deste diretório). Na raiz:
+## Variáveis
 
-```bash
-cp .env.example .env
-# Edite .env e substitua o valor de DB_PASSWORD.
-docker compose up -d --build
-```
+| Variável                            | Padrão local                       | Produção                           |
+| ----------------------------------- | ---------------------------------- | ---------------------------------- |
+| `SPRING_PROFILES_ACTIVE`            | `dev,demo`                         | `prod`                             |
+| `DATABASE_URL`                      | H2 pelo perfil `dev`               | obrigatória                        |
+| `DATABASE_USERNAME`                 | `sa`                               | obrigatória                        |
+| `DATABASE_PASSWORD`                 | vazia                              | obrigatória                        |
+| `JWT_SECRET`                        | segredo somente de desenvolvimento | obrigatório, aleatório e ≥32 bytes |
+| `JWT_EXPIRATION_MINUTES`            | `60`                               | `30` no Compose                    |
+| `CORS_ALLOWED_ORIGIN`               | `http://localhost:5173`            | origem HTTPS exata                 |
+| `APP_FRONTEND_URL`                  | `http://localhost:5173`            | origem pública                     |
+| `PIX_WEBHOOK_SECRET`                | segredo local                      | obrigatório e exclusivo            |
+| `AUTH_COOKIE_SECURE`                | `false`                            | forçado para `true`                |
+| `LOGIN_MAX_FAILURES`                | `5`                                | configurável                       |
+| `LOGIN_FAILURE_WINDOW_MINUTES`      | `10`                               | configurável                       |
+| `LOGIN_BLOCK_MINUTES`               | `15`                               | configurável                       |
+| `INVITATION_EXPIRATION_HOURS`       | `72`                               | configurável                       |
+| `PASSWORD_RESET_EXPIRATION_MINUTES` | `30`                               | configurável                       |
+| `PORT`                              | `8080`                             | configurável                       |
 
-Esse comando constrói o backend existente, inicia PostgreSQL e API com o perfil
-`docker`, aguarda o healthcheck do banco e executa automaticamente as
-migrations Flyway. O frontend continua sendo executado separadamente.
+## Migrations
 
-Para verificar a inicialização:
+Flyway é a única fonte de evolução do esquema e Hibernate usa `ddl-auto=validate`. Nunca edite uma migration já aplicada: crie a próxima `V<N>__descricao.sql`. Antes de publicar, execute `mvn verify` e valide a atualização sobre uma cópia recente do banco.
 
-```bash
-docker compose ps
-docker compose logs backend
-docker exec -it hubflow-db psql -U hubflow_user -d hubflow -c '\dt'
-```
+## Integrações
 
-Para encerrar os contêineres:
-
-```bash
-docker compose down
-```
-
-Os dados do PostgreSQL ficam no volume nomeado
-`hubflow_postgres_data`. `docker compose down` preserva esse volume.
-
-No ambiente oficial, o PostgreSQL usa banco `hubflow`, usuário
-`hubflow_user`, porta interna `5432` e porta `5433` no host. A senha não fica
-no Compose: `DB_PASSWORD` é lida do `.env` da raiz e repassada ao Spring como
-`DATABASE_PASSWORD`. O perfil H2 padrão permanece disponível para
-desenvolvimento local.
-
-## Empacotamento e execução em produção
-
-Gere o artefato com Java 21:
-
-```bash
-cd backend
-mvn clean package
-```
-
-Depois configure o ambiente e execute o JAR:
-
-```bash
-export SPRING_PROFILES_ACTIVE=prod
-export DATABASE_URL='jdbc:postgresql://localhost:5432/hubflow'
-export DATABASE_USERNAME='hubflow_user'
-export DATABASE_PASSWORD='uma-senha-forte'
-export JWT_SECRET='um-segredo-longo-e-aleatorio-com-pelo-menos-32-bytes'
-export CORS_ALLOWED_ORIGIN='https://app.exemplo.com'
-java -jar target/hubflow-fit-api-1.0.0.jar
-```
-
-O `Dockerfile` usa build em múltiplas etapas, compila com Java 21 e executa a
-aplicação como usuário sem privilégios. `JAVA_TOOL_OPTIONS` pode ser usado para
-configurar opções da JVM sem alterar a imagem.
-
-## Variáveis da aplicação
-
-| Variável | Padrão | Uso |
-| --- | --- | --- |
-| `SPRING_PROFILES_ACTIVE` | `dev` | `docker` no Compose; use `prod` em produção |
-| `DATABASE_URL` | definida pelo Compose no perfil `docker` | URL JDBC |
-| `DATABASE_USERNAME` | `hubflow_user` no Compose oficial | Usuário do banco |
-| `DATABASE_PASSWORD` | valor de `DB_PASSWORD` no Compose oficial | Senha do banco |
-| `JWT_SECRET` | segredo somente nos perfis locais | Obrigatório em `prod`; use um valor longo e aleatório |
-| `JWT_EXPIRATION_MINUTES` | `480` | Validade do token em minutos |
-| `CORS_ALLOWED_ORIGIN` | `http://localhost:5173` | Origem permitida para o frontend |
-| `PORT` | `8080` | Porta HTTP da API |
-| `JAVA_TOOL_OPTIONS` | vazio | Opções adicionais da JVM |
-
-## Variável do Docker Compose oficial
-
-Além das configurações `VITE_*` do frontend, o `.env` da raiz contém a
-credencial necessária ao ambiente Docker:
-
-| Variável | Padrão | Uso |
-| --- | --- | --- |
-| `DB_PASSWORD` | sem padrão | Senha compartilhada pelo PostgreSQL e pelo backend |
+`LocalPixProvider`, `ConfigurableLogNotificationGateway` e `LocalCalendarGateway` são adaptadores locais. Para operação real, implemente as respectivas interfaces, trate assinatura/replay do provedor escolhido e acrescente testes de contrato antes de ativar o adaptador no perfil de produção.

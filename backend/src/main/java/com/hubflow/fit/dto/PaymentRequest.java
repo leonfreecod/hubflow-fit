@@ -19,7 +19,8 @@ public record PaymentRequest(
         @NotBlank String studentId,
         String studentName,
         @NotBlank @Size(max = 255) String description,
-        @NotNull @DecimalMin("0.00") @Digits(integer = 10, fraction = 2) BigDecimal amount,
+        @NotNull @DecimalMin(value = "0.00", inclusive = false)
+        @Digits(integer = 10, fraction = 2) BigDecimal amount,
         @NotNull @JsonFormat(pattern = "yyyy-MM-dd") LocalDate dueDate,
         @JsonFormat(pattern = "yyyy-MM-dd") LocalDate paidAt,
         @NotNull PaymentStatus status,

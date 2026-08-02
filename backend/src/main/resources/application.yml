@@ -2,7 +2,7 @@ spring:
   application:
     name: hubflow-fit-api
   profiles:
-    default: dev
+    default: dev,demo
   jpa:
     open-in-view: false
     hibernate:
@@ -13,9 +13,36 @@ spring:
 server:
   port: ${PORT:8080}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
 app:
+  frontend:
+    base-url: ${APP_FRONTEND_URL:http://localhost:5173}
+  accounts:
+    invitation-hours: ${INVITATION_EXPIRATION_HOURS:72}
+    password-reset-minutes: ${PASSWORD_RESET_EXPIRATION_MINUTES:30}
+  notifications:
+    log-links: ${LOG_NOTIFICATION_LINKS:false}
+  auth:
+    cookie-name: ${AUTH_COOKIE_NAME:hubflow_session}
+    cookie-secure: ${AUTH_COOKIE_SECURE:false}
+    cookie-same-site: Strict
+    rate-limit:
+      max-failures: ${LOGIN_MAX_FAILURES:5}
+      window-minutes: ${LOGIN_FAILURE_WINDOW_MINUTES:10}
+      block-minutes: ${LOGIN_BLOCK_MINUTES:15}
+  pix:
+    expiration-minutes: ${PIX_EXPIRATION_MINUTES:30}
+    webhook-secret: ${PIX_WEBHOOK_SECRET:hubflow-local-webhook-secret}
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
   jwt:
     secret: ${JWT_SECRET:hubflow-development-secret-key-change-in-production-2026}
-    expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:60}

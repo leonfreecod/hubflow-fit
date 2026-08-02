@@ -29,8 +29,11 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public List<MonthlyRevenueResponse> monthlyRevenue() {
-        currentUserService.requireAdmin(currentUserService.requireCurrentUser());
-        return monthlyRevenueRepository.findAllByOrderByDisplayOrderAsc().stream()
+        AppUser user = currentUserService.requireCurrentUser();
+        currentUserService.requireAdmin(user);
+        return monthlyRevenueRepository.findAllByOrganizationIdOrderByDisplayOrderAsc(
+                        currentUserService.requireOrganizationId(user)
+                ).stream()
                 .map(item -> new MonthlyRevenueResponse(
                         item.getMonth(), item.getRevenue(), item.getExpenses()
                 ))

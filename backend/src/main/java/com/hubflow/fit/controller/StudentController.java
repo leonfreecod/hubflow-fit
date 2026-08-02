@@ -2,6 +2,7 @@ package com.hubflow.fit.controller;
 
 import com.hubflow.fit.dto.StudentRequest;
 import com.hubflow.fit.dto.StudentResponse;
+import com.hubflow.fit.dto.InvitationResponse;
 import com.hubflow.fit.service.StudentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -55,5 +56,10 @@ public class StudentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {
         studentService.delete(id);
+    }
+
+    @PostMapping("/{id}/invitation")
+    public InvitationResponse resendInvitation(@PathVariable String id) {
+        return studentService.resendInvitation(id);
     }
 }

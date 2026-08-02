@@ -8,6 +8,9 @@ import java.util.UUID;
 @Table(name = "monthly_revenues")
 public class MonthlyRevenue {
     @Id @GeneratedValue(strategy = GenerationType.UUID) private UUID id;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private OrganizationSettings organization;
     @Column(name = "month_label", nullable = false) private String month;
     @Column(nullable = false, precision = 12, scale = 2) private BigDecimal revenue;
     @Column(nullable = false, precision = 12, scale = 2) private BigDecimal expenses;
@@ -15,6 +18,8 @@ public class MonthlyRevenue {
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
+    public OrganizationSettings getOrganization() { return organization; }
+    public void setOrganization(OrganizationSettings organization) { this.organization = organization; }
     public String getMonth() { return month; }
     public void setMonth(String month) { this.month = month; }
     public BigDecimal getRevenue() { return revenue; }

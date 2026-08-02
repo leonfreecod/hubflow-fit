@@ -6,6 +6,8 @@ import com.hubflow.fit.domain.Payment;
 import com.hubflow.fit.domain.ScheduleEvent;
 import com.hubflow.fit.domain.Student;
 import com.hubflow.fit.domain.WorkoutPlan;
+import com.hubflow.fit.domain.WorkoutSession;
+import com.hubflow.fit.domain.WorkoutExercise;
 import com.hubflow.fit.dto.AuthResponse;
 import com.hubflow.fit.dto.OrganizationSettingsRequest;
 import com.hubflow.fit.dto.OrganizationSettingsResponse;
@@ -19,6 +21,10 @@ import com.hubflow.fit.dto.UserRequest;
 import com.hubflow.fit.dto.UserResponse;
 import com.hubflow.fit.dto.WorkoutPlanRequest;
 import com.hubflow.fit.dto.WorkoutPlanResponse;
+import com.hubflow.fit.dto.WorkoutSessionRequest;
+import com.hubflow.fit.dto.WorkoutSessionResponse;
+import com.hubflow.fit.dto.WorkoutExerciseRequest;
+import com.hubflow.fit.dto.WorkoutExerciseResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashSet;
@@ -26,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.ArrayList;
 
 @Component
 public class ApiMapper {
@@ -119,7 +126,8 @@ public class ApiMapper {
                 event.getDurationMinutes(),
                 event.getLocation(),
                 event.getStatus(),
-                event.getType()
+                event.getType(),
+                idAsString(event.getRecurrenceGroupId())
         );
     }
 
@@ -143,6 +151,13 @@ public class ApiMapper {
     }
 
     public WorkoutPlanResponse toResponse(WorkoutPlan workoutPlan) {
+        return toResponse(workoutPlan, Set.of());
+    }
+
+    public WorkoutPlanResponse toResponse(
+            WorkoutPlan workoutPlan,
+            Set<UUID> completedSessionIds
+    ) {
         Objects.requireNonNull(workoutPlan, "workoutPlan must not be null");
         List<String> assignedStudentIds = safeAssignedStudents(workoutPlan.getAssignedStudents()).stream()
                 .map(Student::getId)
@@ -158,7 +173,10 @@ public class ApiMapper {
                 workoutPlan.getSessionsPerWeek(),
                 assignedStudentIds,
                 workoutPlan.getUpdatedAt(),
-                workoutPlan.getDescription()
+                workoutPlan.getDescription(),
+                workoutPlan.getSessions().stream()
+                        .map(session -> toResponse(session, completedSessionIds))
+                        .toList()
         );
     }
 
@@ -184,6 +202,7 @@ public class ApiMapper {
         replaceAssignedStudents(workoutPlan, assignedStudents);
         workoutPlan.setUpdatedAt(request.updatedAt());
         workoutPlan.setDescription(request.description());
+        replaceSessions(workoutPlan, request.sessions());
     }
 
     public OrganizationSettingsResponse toResponse(OrganizationSettings settings) {
@@ -222,6 +241,7 @@ public class ApiMapper {
                 user.getName(),
                 user.getEmail(),
                 user.getRole(),
+                user.getAccountStatus(),
                 user.getAvatar(),
                 user.getLinkedStudent() == null ? null : idAsString(user.getLinkedStudent().getId())
         );
@@ -276,5 +296,63 @@ public class ApiMapper {
         }
         currentStudents.clear();
         currentStudents.addAll(assignedStudents);
+    }
+
+    private WorkoutSessionResponse toResponse(
+            WorkoutSession session,
+            Set<UUID> completedSessionIds
+    ) {
+        return new WorkoutSessionResponse(
+                idAsString(session.getId()),
+                session.getWeekNumber(),
+                session.getDayOrder(),
+                session.getName(),
+                session.getInstructions(),
+                session.getExercises().stream()
+                        .map(exercise -> new WorkoutExerciseResponse(
+                                idAsString(exercise.getId()),
+                                exercise.getName(),
+                                exercise.getPrescription(),
+                                exercise.getRestSeconds()
+                        ))
+                        .toList(),
+                session.getId() != null && completedSessionIds.contains(session.getId())
+        );
+    }
+
+    private void replaceSessions(
+            WorkoutPlan workoutPlan,
+            List<WorkoutSessionRequest> sessionRequests
+    ) {
+        List<WorkoutSession> sessions = workoutPlan.getSessions();
+        if (sessions == null) {
+            sessions = new ArrayList<>();
+            workoutPlan.setSessions(sessions);
+        } else {
+            sessions.clear();
+        }
+
+        for (WorkoutSessionRequest sessionRequest : sessionRequests) {
+            WorkoutSession session = new WorkoutSession();
+            session.setWorkoutPlan(workoutPlan);
+            session.setWeekNumber(sessionRequest.weekNumber());
+            session.setDayOrder(sessionRequest.dayOrder());
+            session.setName(sessionRequest.name());
+            session.setInstructions(sessionRequest.instructions());
+
+            List<WorkoutExercise> exercises = new ArrayList<>();
+            int displayOrder = 0;
+            for (WorkoutExerciseRequest exerciseRequest : sessionRequest.exercises()) {
+                WorkoutExercise exercise = new WorkoutExercise();
+                exercise.setSession(session);
+                exercise.setDisplayOrder(displayOrder++);
+                exercise.setName(exerciseRequest.name());
+                exercise.setPrescription(exerciseRequest.prescription());
+                exercise.setRestSeconds(exerciseRequest.restSeconds());
+                exercises.add(exercise);
+            }
+            session.setExercises(exercises);
+            sessions.add(session);
+        }
     }
 }

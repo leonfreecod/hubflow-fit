@@ -10,6 +10,9 @@ import java.util.UUID;
 public class Student {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organization_id", nullable = false)
+    private OrganizationSettings organization;
     @Column(nullable = false) private String name;
     @Column(nullable = false, unique = true) private String email;
     @Column(nullable = false) private String phone;
@@ -25,6 +28,8 @@ public class Student {
 
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
+    public OrganizationSettings getOrganization() { return organization; }
+    public void setOrganization(OrganizationSettings organization) { this.organization = organization; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getEmail() { return email; }

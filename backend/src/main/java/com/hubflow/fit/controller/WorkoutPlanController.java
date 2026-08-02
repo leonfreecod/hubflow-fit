@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -55,5 +56,21 @@ public class WorkoutPlanController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {
         workoutPlanService.delete(id);
+    }
+
+    @PatchMapping("/{planId}/sessions/{sessionId}/complete")
+    public WorkoutPlanResponse completeSession(
+            @PathVariable String planId,
+            @PathVariable String sessionId
+    ) {
+        return workoutPlanService.completeSession(planId, sessionId);
+    }
+
+    @DeleteMapping("/{planId}/sessions/{sessionId}/complete")
+    public WorkoutPlanResponse undoSessionCompletion(
+            @PathVariable String planId,
+            @PathVariable String sessionId
+    ) {
+        return workoutPlanService.undoSessionCompletion(planId, sessionId);
     }
 }

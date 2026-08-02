@@ -7,5 +7,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface MonthlyRevenueRepository extends JpaRepository<MonthlyRevenue, UUID> {
-    List<MonthlyRevenue> findAllByOrderByDisplayOrderAsc();
+    List<MonthlyRevenue> findAllByOrganizationIdOrderByDisplayOrderAsc(UUID organizationId);
 }

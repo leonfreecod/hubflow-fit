@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,9 +23,11 @@ public record WorkoutPlanRequest(
         @NotNull @Min(1) @Max(7) Integer sessionsPerWeek,
         @NotNull @Size(max = 10000) List<@NotBlank String> assignedStudentIds,
         @NotNull @JsonFormat(pattern = "yyyy-MM-dd") LocalDate updatedAt,
-        @NotBlank @Size(max = 2000) String description
+        @NotBlank @Size(max = 2000) String description,
+        @Size(max = 3640) List<@Valid WorkoutSessionRequest> sessions
 ) {
     public WorkoutPlanRequest {
         assignedStudentIds = assignedStudentIds == null ? null : List.copyOf(assignedStudentIds);
+        sessions = sessions == null ? List.of() : List.copyOf(sessions);
     }
 }

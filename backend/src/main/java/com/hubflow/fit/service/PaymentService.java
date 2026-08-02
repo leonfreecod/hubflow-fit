@@ -9,7 +9,6 @@ import com.hubflow.fit.dto.PaymentResponse;
 import com.hubflow.fit.exception.NotFoundException;
 import com.hubflow.fit.repository.PaymentRepository;
 import com.hubflow.fit.repository.StudentRepository;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,42 +40,58 @@ public class PaymentService {
     public List<PaymentResponse> findAll() {
         AppUser currentUser = currentUserService.requireCurrentUser();
         List<Payment> payments = currentUserService.isAdmin(currentUser)
-                ? paymentRepository.findAll(Sort.by(Sort.Direction.DESC, "dueDate"))
+                ? paymentRepository.findAllByStudentOrganizationIdOrderByDueDateDesc(
+                        currentUserService.requireOrganizationId(currentUser)
+                )
                 : paymentRepository.findAllByStudentIdOrderByDueDateDesc(
                         currentUserService.requireLinkedStudentId(currentUser)
                 );
-        return payments.stream().map(apiMapper::toResponse).toList();
+        return payments.stream()
+                .peek(this::deriveOpenStatus)
+                .map(apiMapper::toResponse)
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public PaymentResponse findById(String id) {
         AppUser currentUser = currentUserService.requireCurrentUser();
-        Payment payment = findEntity(parsePaymentId(id));
+        Payment payment = findEntity(
+                parsePaymentId(id),
+                currentUserService.requireOrganizationId(currentUser)
+        );
         currentUserService.requireStudentAccess(currentUser, payment.getStudent().getId());
+        deriveOpenStatus(payment);
         return apiMapper.toResponse(payment);
     }
 
     @Transactional
     public PaymentResponse create(PaymentRequest request) {
-        requireAdmin();
-        Student student = findStudent(parseStudentId(request.studentId()));
+        AppUser currentUser = requireAdmin();
+        UUID organizationId = currentUserService.requireOrganizationId(currentUser);
+        Student student = findStudent(parseStudentId(request.studentId()), organizationId);
         Payment payment = apiMapper.toEntity(request, student);
+        normalizePaymentState(payment);
         return apiMapper.toResponse(paymentRepository.save(payment));
     }
 
     @Transactional
     public PaymentResponse update(String id, PaymentRequest request) {
-        requireAdmin();
-        Payment payment = findEntity(parsePaymentId(id));
-        Student student = findStudent(parseStudentId(request.studentId()));
+        AppUser currentUser = requireAdmin();
+        UUID organizationId = currentUserService.requireOrganizationId(currentUser);
+        Payment payment = findEntity(parsePaymentId(id), organizationId);
+        Student student = findStudent(parseStudentId(request.studentId()), organizationId);
         apiMapper.updateEntity(payment, request, student);
+        normalizePaymentState(payment);
         return apiMapper.toResponse(paymentRepository.save(payment));
     }
 
     @Transactional
     public PaymentResponse markPaid(String id) {
-        requireAdmin();
-        Payment payment = findEntity(parsePaymentId(id));
+        AppUser currentUser = requireAdmin();
+        Payment payment = findEntity(
+                parsePaymentId(id),
+                currentUserService.requireOrganizationId(currentUser)
+        );
         payment.setStatus(PaymentStatus.PAID);
         if (payment.getPaidAt() == null) {
             payment.setPaidAt(LocalDate.now());
@@ -86,22 +101,46 @@ public class PaymentService {
 
     @Transactional
     public void delete(String id) {
-        requireAdmin();
-        paymentRepository.delete(findEntity(parsePaymentId(id)));
+        AppUser currentUser = requireAdmin();
+        paymentRepository.delete(findEntity(
+                parsePaymentId(id),
+                currentUserService.requireOrganizationId(currentUser)
+        ));
     }
 
-    private void requireAdmin() {
-        currentUserService.requireAdmin(currentUserService.requireCurrentUser());
+    private AppUser requireAdmin() {
+        AppUser currentUser = currentUserService.requireCurrentUser();
+        currentUserService.requireAdmin(currentUser);
+        return currentUser;
     }
 
-    private Payment findEntity(UUID id) {
-        return paymentRepository.findById(id)
+    private Payment findEntity(UUID id, UUID organizationId) {
+        return paymentRepository.findByIdAndStudentOrganizationId(id, organizationId)
                 .orElseThrow(() -> new NotFoundException("Pagamento não encontrado."));
     }
 
-    private Student findStudent(UUID id) {
-        return studentRepository.findById(id)
+    private Student findStudent(UUID id, UUID organizationId) {
+        return studentRepository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new NotFoundException("Aluno não encontrado."));
+    }
+
+    private void normalizePaymentState(Payment payment) {
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            if (payment.getPaidAt() == null) {
+                payment.setPaidAt(LocalDate.now());
+            }
+            return;
+        }
+        payment.setPaidAt(null);
+        deriveOpenStatus(payment);
+    }
+
+    private void deriveOpenStatus(Payment payment) {
+        if (payment.getStatus() != PaymentStatus.PAID) {
+            payment.setStatus(payment.getDueDate().isBefore(LocalDate.now())
+                    ? PaymentStatus.OVERDUE
+                    : PaymentStatus.PENDING);
+        }
     }
 
     private UUID parsePaymentId(String id) {

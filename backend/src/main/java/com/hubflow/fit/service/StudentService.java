@@ -4,6 +4,7 @@ import com.hubflow.fit.domain.AppUser;
 import com.hubflow.fit.domain.Student;
 import com.hubflow.fit.dto.StudentRequest;
 import com.hubflow.fit.dto.StudentResponse;
+import com.hubflow.fit.dto.InvitationResponse;
 import com.hubflow.fit.exception.ConflictException;
 import com.hubflow.fit.exception.NotFoundException;
 import com.hubflow.fit.repository.AppUserRepository;
@@ -12,7 +13,6 @@ import com.hubflow.fit.repository.ScheduleEventRepository;
 import com.hubflow.fit.repository.StudentRepository;
 import com.hubflow.fit.repository.StudentProgressPointRepository;
 import com.hubflow.fit.repository.WorkoutPlanRepository;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +31,7 @@ public class StudentService {
     private final StudentProgressPointRepository studentProgressPointRepository;
     private final ApiMapper apiMapper;
     private final CurrentUserService currentUserService;
+    private final AccountLifecycleService accountLifecycleService;
 
     public StudentService(
             StudentRepository studentRepository,
@@ -40,7 +41,8 @@ public class StudentService {
             WorkoutPlanRepository workoutPlanRepository,
             StudentProgressPointRepository studentProgressPointRepository,
             ApiMapper apiMapper,
-            CurrentUserService currentUserService
+            CurrentUserService currentUserService,
+            AccountLifecycleService accountLifecycleService
     ) {
         this.studentRepository = studentRepository;
         this.appUserRepository = appUserRepository;
@@ -50,17 +52,23 @@ public class StudentService {
         this.studentProgressPointRepository = studentProgressPointRepository;
         this.apiMapper = apiMapper;
         this.currentUserService = currentUserService;
+        this.accountLifecycleService = accountLifecycleService;
     }
 
     @Transactional(readOnly = true)
     public List<StudentResponse> findAll() {
         AppUser currentUser = currentUserService.requireCurrentUser();
         if (!currentUserService.isAdmin(currentUser)) {
-            Student student = findEntity(currentUserService.requireLinkedStudentId(currentUser));
+            Student student = findEntity(
+                    currentUserService.requireLinkedStudentId(currentUser),
+                    currentUserService.requireOrganizationId(currentUser)
+            );
             return List.of(apiMapper.toResponse(student));
         }
 
-        return studentRepository.findAll(Sort.by(Sort.Direction.ASC, "name")).stream()
+        return studentRepository.findAllByOrganizationIdOrderByNameAsc(
+                        currentUserService.requireOrganizationId(currentUser)
+                ).stream()
                 .map(apiMapper::toResponse)
                 .toList();
     }
@@ -70,18 +78,26 @@ public class StudentService {
         UUID studentId = parseId(id);
         AppUser currentUser = currentUserService.requireCurrentUser();
         currentUserService.requireStudentAccess(currentUser, studentId);
-        return apiMapper.toResponse(findEntity(studentId));
+        return apiMapper.toResponse(findEntity(
+                studentId,
+                currentUserService.requireOrganizationId(currentUser)
+        ));
     }
 
     @Transactional
     public StudentResponse create(StudentRequest request) {
-        currentUserService.requireAdmin(currentUserService.requireCurrentUser());
+        AppUser currentUser = currentUserService.requireCurrentUser();
+        currentUserService.requireAdmin(currentUser);
+        UUID organizationId = currentUserService.requireOrganizationId(currentUser);
         String email = normalizeEmail(request.email());
-        ensureEmailAvailable(email, null);
+        ensureEmailAvailable(email, organizationId, null);
 
         Student student = apiMapper.toEntity(request);
         student.setEmail(email);
-        return apiMapper.toResponse(studentRepository.save(student));
+        student.setOrganization(currentUser.getOrganization());
+        Student saved = studentRepository.save(student);
+        accountLifecycleService.inviteStudent(saved);
+        return apiMapper.toResponse(saved);
     }
 
     @Transactional
@@ -90,9 +106,10 @@ public class StudentService {
         AppUser currentUser = currentUserService.requireCurrentUser();
         currentUserService.requireStudentAccess(currentUser, studentId);
 
-        Student student = findEntity(studentId);
+        UUID organizationId = currentUserService.requireOrganizationId(currentUser);
+        Student student = findEntity(studentId, organizationId);
         String email = normalizeEmail(request.email());
-        ensureEmailAvailable(email, studentId);
+        ensureEmailAvailable(email, organizationId, studentId);
 
         if (currentUserService.isAdmin(currentUser)) {
             apiMapper.updateEntity(student, request);
@@ -101,14 +118,23 @@ public class StudentService {
         }
         student.setEmail(email);
 
+        appUserRepository.findByLinkedStudentIdAndOrganizationId(studentId, organizationId)
+                .ifPresent(user -> {
+                    ensurePortalEmailAvailable(email, user.getId());
+                    user.setName(student.getName());
+                    user.setEmail(email);
+                });
+
         return apiMapper.toResponse(studentRepository.save(student));
     }
 
     @Transactional
     public void delete(String id) {
-        currentUserService.requireAdmin(currentUserService.requireCurrentUser());
-        Student student = findEntity(parseId(id));
-        appUserRepository.findByLinkedStudentId(student.getId())
+        AppUser currentUser = currentUserService.requireCurrentUser();
+        currentUserService.requireAdmin(currentUser);
+        UUID organizationId = currentUserService.requireOrganizationId(currentUser);
+        Student student = findEntity(parseId(id), organizationId);
+        appUserRepository.findByLinkedStudentIdAndOrganizationId(student.getId(), organizationId)
                 .ifPresent(appUserRepository::delete);
         paymentRepository.deleteAll(
                 paymentRepository.findAllByStudentIdOrderByDueDateDesc(student.getId())
@@ -122,6 +148,17 @@ public class StudentService {
         studentRepository.delete(student);
     }
 
+    @Transactional
+    public InvitationResponse resendInvitation(String id) {
+        AppUser currentUser = currentUserService.requireCurrentUser();
+        currentUserService.requireAdmin(currentUser);
+        Student student = findEntity(
+                parseId(id),
+                currentUserService.requireOrganizationId(currentUser)
+        );
+        return accountLifecycleService.inviteStudent(student);
+    }
+
     private void updateOwnProfile(Student student, StudentRequest request) {
         student.setName(request.name());
         student.setEmail(request.email());
@@ -129,16 +166,24 @@ public class StudentService {
         student.setGoal(request.goal());
     }
 
-    private void ensureEmailAvailable(String email, UUID currentStudentId) {
-        studentRepository.findByEmailIgnoreCase(email)
+    private void ensureEmailAvailable(String email, UUID organizationId, UUID currentStudentId) {
+        studentRepository.findByEmailIgnoreCaseAndOrganizationId(email, organizationId)
                 .filter(student -> !student.getId().equals(currentStudentId))
                 .ifPresent(student -> {
                     throw new ConflictException("Já existe um aluno com este e-mail.");
                 });
     }
 
-    private Student findEntity(UUID id) {
-        return studentRepository.findById(id)
+    private void ensurePortalEmailAvailable(String email, UUID currentUserId) {
+        appUserRepository.findByEmailIgnoreCase(email)
+                .filter(user -> !user.getId().equals(currentUserId))
+                .ifPresent(user -> {
+                    throw new ConflictException("Já existe uma conta com este e-mail.");
+                });
+    }
+
+    private Student findEntity(UUID id, UUID organizationId) {
+        return studentRepository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new NotFoundException("Aluno não encontrado."));
     }
 

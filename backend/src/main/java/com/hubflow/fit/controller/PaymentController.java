@@ -2,7 +2,9 @@ package com.hubflow.fit.controller;
 
 import com.hubflow.fit.dto.PaymentRequest;
 import com.hubflow.fit.dto.PaymentResponse;
+import com.hubflow.fit.dto.PixChargeResponse;
 import com.hubflow.fit.service.PaymentService;
+import com.hubflow.fit.service.PixChargeService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -23,9 +25,11 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final PixChargeService pixChargeService;
 
-    public PaymentController(PaymentService paymentService) {
+    public PaymentController(PaymentService paymentService, PixChargeService pixChargeService) {
         this.paymentService = paymentService;
+        this.pixChargeService = pixChargeService;
     }
 
     @GetMapping
@@ -61,5 +65,15 @@ public class PaymentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String id) {
         paymentService.delete(id);
+    }
+
+    @GetMapping("/{id}/pix-charge")
+    public PixChargeResponse getPixCharge(@PathVariable String id) {
+        return pixChargeService.get(id);
+    }
+
+    @PostMapping("/{id}/pix-charge")
+    public PixChargeResponse createPixCharge(@PathVariable String id) {
+        return pixChargeService.createOrRefresh(id);
     }
 }

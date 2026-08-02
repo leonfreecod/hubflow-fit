@@ -58,11 +58,23 @@ public class CurrentUserService {
         return user.getLinkedStudent().getId();
     }
 
-    public void requireStudentAccess(AppUser user, UUID studentId) {
-        if (isAdmin(user)) {
-            return;
+    public UUID requireOrganizationId(AppUser user) {
+        if (user.getOrganization() == null || user.getOrganization().getId() == null) {
+            throw new ForbiddenException("O usuário não possui uma organização vinculada.");
         }
-        if (!requireLinkedStudentId(user).equals(studentId)) {
+        return user.getOrganization().getId();
+    }
+
+    public void requireOrganizationAccess(AppUser user, UUID organizationId) {
+        if (!requireOrganizationId(user).equals(organizationId)) {
+            throw new ForbiddenException(
+                    "Você não tem permissão para acessar dados de outra organização."
+            );
+        }
+    }
+
+    public void requireStudentAccess(AppUser user, UUID studentId) {
+        if (!isAdmin(user) && !requireLinkedStudentId(user).equals(studentId)) {
             throw new ForbiddenException(
                     "Você não tem permissão para acessar os dados deste aluno."
             );

@@ -24,6 +24,7 @@ public record ScheduleEventRequest(
         @NotNull @Min(1) @Max(1440) Integer durationMinutes,
         @NotBlank @Size(max = 255) String location,
         @NotNull ScheduleStatus status,
-        @NotNull ScheduleType type
+        @NotNull ScheduleType type,
+        @Min(1) @Max(52) Integer recurrenceWeeks
 ) {
 }

@@ -17,6 +17,7 @@ public record ScheduleEventResponse(
         int durationMinutes,
         String location,
         ScheduleStatus status,
-        ScheduleType type
+        ScheduleType type,
+        String recurrenceGroupId
 ) {
 }

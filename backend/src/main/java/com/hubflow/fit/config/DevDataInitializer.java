@@ -1,6 +1,7 @@
 package com.hubflow.fit.config;
 
 import com.hubflow.fit.domain.AppUser;
+import com.hubflow.fit.domain.AccountStatus;
 import com.hubflow.fit.domain.MonthlyRevenue;
 import com.hubflow.fit.domain.OrganizationSettings;
 import com.hubflow.fit.domain.Payment;
@@ -15,6 +16,8 @@ import com.hubflow.fit.domain.StudentStatus;
 import com.hubflow.fit.domain.UserRole;
 import com.hubflow.fit.domain.WorkoutLevel;
 import com.hubflow.fit.domain.WorkoutPlan;
+import com.hubflow.fit.domain.WorkoutSession;
+import com.hubflow.fit.domain.WorkoutExercise;
 import com.hubflow.fit.repository.AppUserRepository;
 import com.hubflow.fit.repository.MonthlyRevenueRepository;
 import com.hubflow.fit.repository.OrganizationSettingsRepository;
@@ -42,7 +45,7 @@ import java.util.Map;
 import java.util.Set;
 
 @Component
-@Profile({"dev", "docker"})
+@Profile("demo")
 public class DevDataInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevDataInitializer.class);
@@ -205,32 +208,35 @@ public class DevDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        SeedResult<Student> students = seedStudents();
-        int organizationsCreated = seedOrganization();
-        int usersCreated = seedUsers(students.byKey());
+        SeedResult<OrganizationSettings> organizationResult = seedOrganization();
+        OrganizationSettings organization = organizationResult.byKey().get("demo");
+        SeedResult<Student> students = seedStudents(organization);
+        int usersCreated = seedUsers(students.byKey(), organization);
         int paymentsCreated = seedPayments(students.byKey());
         int eventsCreated = seedSchedule(students.byKey());
-        int workoutsCreated = seedWorkouts(students.byKey());
-        int revenuesCreated = seedMonthlyRevenue();
+        int workoutsCreated = seedWorkouts(students.byKey(), organization);
+        int revenuesCreated = seedMonthlyRevenue(organization);
         int progressCreated = seedStudentProgress(students.byKey().get("student-001"));
 
         log.info(
                 "Seed dev verificado: {} aluno(s), {} organização(ões), {} usuário(s), "
                         + "{} pagamento(s), {} evento(s), {} treino(s), {} receita(s) "
                         + "e {} ponto(s) de progresso criado(s)",
-                students.created(), organizationsCreated, usersCreated, paymentsCreated,
+                students.created(), organizationResult.created(), usersCreated, paymentsCreated,
                 eventsCreated, workoutsCreated, revenuesCreated, progressCreated
         );
     }
 
-    private SeedResult<Student> seedStudents() {
+    private SeedResult<Student> seedStudents(OrganizationSettings organization) {
         Map<String, Student> studentsByKey = new LinkedHashMap<>();
         int created = 0;
 
         for (StudentSeed seed : STUDENTS) {
-            Student student = studentRepository.findByEmailIgnoreCase(seed.email()).orElse(null);
+            Student student = studentRepository
+                    .findByEmailIgnoreCaseAndOrganizationId(seed.email(), organization.getId())
+                    .orElse(null);
             if (student == null) {
-                student = studentRepository.save(toStudent(seed));
+                student = studentRepository.save(toStudent(seed, organization));
                 created++;
             }
             studentsByKey.put(seed.key(), student);
@@ -239,9 +245,12 @@ public class DevDataInitializer implements ApplicationRunner {
         return new SeedResult<>(studentsByKey, created);
     }
 
-    private int seedOrganization() {
-        if (organizationSettingsRepository.count() > 0) {
-            return 0;
+    private SeedResult<OrganizationSettings> seedOrganization() {
+        OrganizationSettings existing = organizationSettingsRepository
+                .findByDocument("12.345.678/0001-90")
+                .orElse(null);
+        if (existing != null) {
+            return new SeedResult<>(Map.of("demo", existing), 0);
         }
 
         OrganizationSettings organization = new OrganizationSettings();
@@ -251,15 +260,18 @@ public class DevDataInitializer implements ApplicationRunner {
         organization.setEmail("contato@hubrunning.com.br");
         organization.setPixKey("financeiro@hubrunning.com.br");
         organization.setCity("São Paulo — SP");
-        organizationSettingsRepository.save(organization);
-        return 1;
+        OrganizationSettings saved = organizationSettingsRepository.save(organization);
+        return new SeedResult<>(Map.of("demo", saved), 1);
     }
 
-    private int seedUsers(Map<String, Student> studentsByKey) {
+    private int seedUsers(
+            Map<String, Student> studentsByKey,
+            OrganizationSettings organization
+    ) {
         int created = 0;
         if (appUserRepository.findByEmailIgnoreCase("admin@hubflow.fit").isEmpty()) {
             appUserRepository.save(newUser(
-                    "Rafael Martins", "admin@hubflow.fit", UserRole.ADMIN, null
+                    "Rafael Martins", "admin@hubflow.fit", UserRole.ADMIN, null, organization
             ));
             created++;
         }
@@ -267,7 +279,7 @@ public class DevDataInitializer implements ApplicationRunner {
         if (appUserRepository.findByEmailIgnoreCase("aluno@hubflow.fit").isEmpty()) {
             appUserRepository.save(newUser(
                     "Mariana Costa", "aluno@hubflow.fit", UserRole.STUDENT,
-                    studentsByKey.get("student-001")
+                    studentsByKey.get("student-001"), organization
             ));
             created++;
         }
@@ -316,28 +328,39 @@ public class DevDataInitializer implements ApplicationRunner {
         return created;
     }
 
-    private int seedWorkouts(Map<String, Student> studentsByKey) {
-        Set<String> existingNames = workoutPlanRepository.findAll().stream()
-                .map(WorkoutPlan::getName)
-                .collect(java.util.stream.Collectors.toSet());
+    private int seedWorkouts(
+            Map<String, Student> studentsByKey,
+            OrganizationSettings organization
+    ) {
+        List<WorkoutPlan> existingPlans = workoutPlanRepository
+                .findAllByOrganizationIdOrderByUpdatedAtDesc(organization.getId());
+        Map<String, WorkoutPlan> existingByName = existingPlans.stream()
+                .collect(java.util.stream.Collectors.toMap(WorkoutPlan::getName, plan -> plan));
         int created = 0;
 
         for (WorkoutSeed seed : WORKOUTS) {
-            if (!existingNames.contains(seed.name())) {
-                workoutPlanRepository.save(toWorkoutPlan(seed, studentsByKey));
+            WorkoutPlan existing = existingByName.get(seed.name());
+            if (existing == null) {
+                workoutPlanRepository.save(toWorkoutPlan(seed, studentsByKey, organization));
                 created++;
+            } else if (existing.getSessions().isEmpty()) {
+                existing.setSessions(createSampleSessions(existing));
+                workoutPlanRepository.save(existing);
             }
         }
         return created;
     }
 
-    private int seedMonthlyRevenue() {
-        if (monthlyRevenueRepository.count() > 0) {
+    private int seedMonthlyRevenue(OrganizationSettings organization) {
+        if (!monthlyRevenueRepository
+                .findAllByOrganizationIdOrderByDisplayOrderAsc(organization.getId())
+                .isEmpty()) {
             return 0;
         }
         int order = 0;
         for (MonthlyRevenueSeed seed : MONTHLY_REVENUES) {
             MonthlyRevenue item = new MonthlyRevenue();
+            item.setOrganization(organization);
             item.setMonth(seed.month());
             item.setRevenue(new BigDecimal(seed.revenue()));
             item.setExpenses(new BigDecimal(seed.expenses()));
@@ -366,8 +389,9 @@ public class DevDataInitializer implements ApplicationRunner {
         return STUDENT_PROGRESS.size();
     }
 
-    private Student toStudent(StudentSeed seed) {
+    private Student toStudent(StudentSeed seed, OrganizationSettings organization) {
         Student student = new Student();
+        student.setOrganization(organization);
         student.setName(seed.name());
         student.setEmail(seed.email());
         student.setPhone(seed.phone());
@@ -383,13 +407,21 @@ public class DevDataInitializer implements ApplicationRunner {
         return student;
     }
 
-    private AppUser newUser(String name, String email, UserRole role, Student linkedStudent) {
+    private AppUser newUser(
+            String name,
+            String email,
+            UserRole role,
+            Student linkedStudent,
+            OrganizationSettings organization
+    ) {
         AppUser user = new AppUser();
         user.setName(name);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(DEVELOPMENT_PASSWORD));
         user.setRole(role);
+        user.setAccountStatus(AccountStatus.ACTIVE);
         user.setLinkedStudent(linkedStudent);
+        user.setOrganization(organization);
         return user;
     }
 
@@ -418,8 +450,13 @@ public class DevDataInitializer implements ApplicationRunner {
         return event;
     }
 
-    private WorkoutPlan toWorkoutPlan(WorkoutSeed seed, Map<String, Student> studentsByKey) {
+    private WorkoutPlan toWorkoutPlan(
+            WorkoutSeed seed,
+            Map<String, Student> studentsByKey,
+            OrganizationSettings organization
+    ) {
         WorkoutPlan workout = new WorkoutPlan();
+        workout.setOrganization(organization);
         workout.setName(seed.name());
         workout.setObjective(seed.objective());
         workout.setLevel(seed.level());
@@ -430,7 +467,50 @@ public class DevDataInitializer implements ApplicationRunner {
         workout.setAssignedStudents(assignedStudents);
         workout.setUpdatedAt(LocalDate.parse(seed.updatedAt()));
         workout.setDescription(seed.description());
+        workout.setSessions(createSampleSessions(workout));
         return workout;
+    }
+
+    private List<WorkoutSession> createSampleSessions(WorkoutPlan workout) {
+        WorkoutSession first = new WorkoutSession();
+        first.setWorkoutPlan(workout);
+        first.setWeekNumber(1);
+        first.setDayOrder(1);
+        first.setName("Sessão de adaptação");
+        first.setInstructions("Priorize técnica e intensidade confortável.");
+        first.setExercises(List.of(
+                newExercise(first, 0, "Aquecimento", "10 min em ritmo leve", 0),
+                newExercise(first, 1, "Bloco principal", "4 séries de 6 min em ritmo moderado", 120),
+                newExercise(first, 2, "Volta à calma", "8 min leves e mobilidade", 0)
+        ));
+
+        WorkoutSession second = new WorkoutSession();
+        second.setWorkoutPlan(workout);
+        second.setWeekNumber(1);
+        second.setDayOrder(2);
+        second.setName("Sessão de progressão");
+        second.setInstructions("Mantenha percepção de esforço entre 6 e 7 de 10.");
+        second.setExercises(List.of(
+                newExercise(second, 0, "Preparação", "Mobilidade e ativação por 8 min", 0),
+                newExercise(second, 1, "Progressivo", "30 min aumentando o ritmo a cada 10 min", 90)
+        ));
+        return List.of(first, second);
+    }
+
+    private WorkoutExercise newExercise(
+            WorkoutSession session,
+            int order,
+            String name,
+            String prescription,
+            int restSeconds
+    ) {
+        WorkoutExercise exercise = new WorkoutExercise();
+        exercise.setSession(session);
+        exercise.setDisplayOrder(order);
+        exercise.setName(name);
+        exercise.setPrescription(prescription);
+        exercise.setRestSeconds(restSeconds);
+        return exercise;
     }
 
     private record SeedResult<T>(Map<String, T> byKey, int created) {

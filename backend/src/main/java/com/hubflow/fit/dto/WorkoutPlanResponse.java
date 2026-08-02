@@ -15,9 +15,11 @@ public record WorkoutPlanResponse(
         int sessionsPerWeek,
         List<String> assignedStudentIds,
         @JsonFormat(pattern = "yyyy-MM-dd") LocalDate updatedAt,
-        String description
+        String description,
+        List<WorkoutSessionResponse> sessions
 ) {
     public WorkoutPlanResponse {
         assignedStudentIds = List.copyOf(assignedStudentIds);
+        sessions = List.copyOf(sessions);
     }
 }

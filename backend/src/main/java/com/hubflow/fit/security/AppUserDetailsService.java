@@ -27,6 +27,7 @@ public class AppUserDetailsService implements UserDetailsService {
         return User.withUsername(appUser.getEmail())
                 .password(appUser.getPasswordHash())
                 .roles(appUser.getRole().name())
+                .disabled(appUser.getAccountStatus() != com.hubflow.fit.domain.AccountStatus.ACTIVE)
                 .build();
     }
 }
