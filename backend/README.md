@@ -28,7 +28,7 @@ mvn test
 ## Backend e PostgreSQL com Docker
 
 O ambiente oficial é o arquivo `docker-compose.yml` da raiz do projeto
-(`../../docker-compose.yml` a partir deste diretório). Na raiz:
+(`../docker-compose.yml` a partir deste diretório). Na raiz:
 
 ```bash
 cp .env.example .env
@@ -40,8 +40,7 @@ Esse comando constrói o backend existente, inicia PostgreSQL e API com o perfil
 `docker`, aguarda o healthcheck do banco e executa automaticamente as
 migrations Flyway. O frontend continua sendo executado separadamente.
 
-O Compose interno em `../docker-compose.yml` está marcado como legado e não é
-mais a fonte principal do ambiente. Para verificar a inicialização:
+Para verificar a inicialização:
 
 ```bash
 docker compose ps
@@ -105,7 +104,8 @@ configurar opções da JVM sem alterar a imagem.
 
 ## Variável do Docker Compose oficial
 
-O `.env` da raiz contém apenas a credencial necessária ao ambiente Docker:
+Além das configurações `VITE_*` do frontend, o `.env` da raiz contém a
+credencial necessária ao ambiente Docker:
 
 | Variável | Padrão | Uso |
 | --- | --- | --- |

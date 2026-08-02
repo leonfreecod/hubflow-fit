@@ -1,44 +1,45 @@
-# LEGADO: mantido temporariamente para não interromper fluxos existentes.
-# O ambiente Docker oficial é definido por ../docker-compose.yml e deve ser
-# iniciado a partir da raiz do projeto.
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: hubflow-db
+    restart: unless-stopped
+
     environment:
-      POSTGRES_DB: ${HUBFLOW_POSTGRES_DB:-hubflow}
-      POSTGRES_USER: ${HUBFLOW_POSTGRES_USER:-hubflow}
-      POSTGRES_PASSWORD: ${HUBFLOW_POSTGRES_PASSWORD:-hubflow_dev}
+      POSTGRES_DB: hubflow
+      POSTGRES_USER: hubflow_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
+
     ports:
-      - "${HUBFLOW_POSTGRES_PORT:-5432}:5432"
+      - "5433:5432"
+
     volumes:
       - hubflow_postgres_data:/var/lib/postgresql/data
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U hubflow_user -d hubflow"]
       interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 5s
-    restart: unless-stopped
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: hubflow-backend
+    restart: unless-stopped
+
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${HUBFLOW_POSTGRES_DB:-hubflow}
-      DATABASE_USERNAME: ${HUBFLOW_POSTGRES_USER:-hubflow}
-      DATABASE_PASSWORD: ${HUBFLOW_POSTGRES_PASSWORD:-hubflow_dev}
-      JWT_SECRET: ${HUBFLOW_JWT_SECRET:-change-this-local-development-secret-at-least-32-bytes}
-      JWT_EXPIRATION_MINUTES: ${HUBFLOW_JWT_EXPIRATION_MINUTES:-480}
-      CORS_ALLOWED_ORIGIN: ${HUBFLOW_CORS_ALLOWED_ORIGIN:-http://localhost:5173}
-      PORT: 8080
+      DATABASE_URL: jdbc:postgresql://postgres:5432/hubflow
+      DATABASE_USERNAME: hubflow_user
+      DATABASE_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD no arquivo .env}
+
     ports:
-      - "${HUBFLOW_BACKEND_PORT:-8080}:8080"
+      - "8080:8080"
+
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   hubflow_postgres_data:

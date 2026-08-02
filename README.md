@@ -139,8 +139,8 @@ mvn spring-boot:run
 
 ### Ambiente Docker oficial
 
-O único Compose oficial fica na raiz do projeto, um nível acima deste
-diretório. Ele inicia PostgreSQL e o backend existente. A partir da raiz:
+O Compose oficial é versionado em `docker-compose.yml`, na raiz deste
+repositório. Ele inicia PostgreSQL e o backend. A partir da raiz:
 
 ```bash
 cp .env.example .env
@@ -169,10 +169,7 @@ Para encerrar sem apagar os dados:
 docker compose down
 ```
 
-O arquivo `docker-compose.yml` deste diretório está marcado como legado e foi
-preservado apenas para não quebrar fluxos antigos. Novos usos devem executar
-exclusivamente o Compose da raiz. Consulte também
-[`backend/README.md`](backend/README.md).
+Consulte também [`backend/README.md`](backend/README.md).
 
 ### Build de produção
 
