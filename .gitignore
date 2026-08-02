@@ -3,9 +3,14 @@ dist
 .env
 .env.*
 !.env.example
+!.env.prod.example
 *.local
 .DS_Store
 .vscode/
 .idea/
 backend/target/
 backend/data/
+coverage/
+playwright-report/
+test-results/
+backups/

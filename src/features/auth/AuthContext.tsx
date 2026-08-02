@@ -1,17 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { User } from '../../domain/models';
-import {
-  repositories,
-  usesApiDataSource,
-} from '../../services/repositories/localRepositories';
-import { apiSession, apiUnauthorizedEvent } from '../../services/api/apiClient';
+import { repositories, usesApiDataSource } from '../../services/repositories/localRepositories';
+import { apiSession, apiUnauthorizedEvent, endApiSession } from '../../services/api/apiClient';
 import { readStorage, storageKeys, writeStorage } from '../../services/storage/storage';
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login(email: string, password: string): Promise<boolean>;
-  logout(): void;
+  logout(): Promise<void>;
+  refreshUser(): Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -24,9 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const restore = async () => {
       try {
         const userId = readStorage<string | null>(storageKeys.session, null);
-        const hasStoredSession = usesApiDataSource
-          ? Boolean(apiSession.getToken())
-          : Boolean(userId);
+        const hasStoredSession = usesApiDataSource || Boolean(userId);
 
         if (!hasStoredSession) {
           localStorage.removeItem(storageKeys.session);
@@ -62,22 +58,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(apiUnauthorizedEvent, expireSession);
   }, []);
 
-  const value = useMemo<AuthContextValue>(() => ({
-    user,
-    loading,
-    async login(email, password) {
-      const authenticated = await repositories.users.findByCredentials(email.trim().toLowerCase(), password);
-      if (!authenticated) return false;
-      setUser(authenticated);
-      writeStorage(storageKeys.session, authenticated.id);
-      return true;
-    },
-    logout() {
-      setUser(null);
-      apiSession.clear();
-      localStorage.removeItem(storageKeys.session);
-    },
-  }), [user, loading]);
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      loading,
+      async login(email, password) {
+        const authenticated = await repositories.users.findByCredentials(
+          email.trim().toLowerCase(),
+          password,
+        );
+        if (!authenticated) return false;
+        setUser(authenticated);
+        writeStorage(storageKeys.session, authenticated.id);
+        return true;
+      },
+      async logout() {
+        setUser(null);
+        localStorage.removeItem(storageKeys.session);
+        if (usesApiDataSource) {
+          try {
+            await endApiSession();
+          } catch {
+            apiSession.clear();
+          }
+        }
+      },
+      async refreshUser() {
+        const refreshed = await repositories.users.findById(user?.id ?? '');
+        if (refreshed) {
+          setUser(refreshed);
+          writeStorage(storageKeys.session, refreshed.id);
+        }
+      },
+    }),
+    [user, loading],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

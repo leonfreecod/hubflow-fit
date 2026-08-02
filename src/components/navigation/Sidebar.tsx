@@ -48,9 +48,16 @@ export function Sidebar({ role, open, onClose }: SidebarProps) {
       {open && <button className="sidebar-overlay" aria-label="Fechar menu" onClick={onClose} />}
       <aside className={`sidebar ${open ? 'sidebar--open' : ''}`}>
         <div className="sidebar__brand">
-          <span className="brand-mark"><Waypoints size={22} /></span>
-          <div><strong>{brand.name}</strong><small>{brand.suffix}</small></div>
-          <button className="sidebar__close" onClick={onClose} aria-label="Fechar menu"><X size={20} /></button>
+          <span className="brand-mark">
+            <Waypoints size={22} />
+          </span>
+          <div>
+            <strong>{brand.name}</strong>
+            <small>{brand.suffix}</small>
+          </div>
+          <button className="sidebar__close" onClick={onClose} aria-label="Fechar menu">
+            <X size={20} />
+          </button>
         </div>
 
         <div className="sidebar__workspace">
@@ -60,7 +67,14 @@ export function Sidebar({ role, open, onClose }: SidebarProps) {
 
         <nav className="sidebar__nav" aria-label="Navegação principal">
           {items.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} onClick={onClose} className={({ isActive }) => isActive ? 'sidebar-link sidebar-link--active' : 'sidebar-link'}>
+            <NavLink
+              key={to}
+              to={to}
+              onClick={onClose}
+              className={({ isActive }) =>
+                isActive ? 'sidebar-link sidebar-link--active' : 'sidebar-link'
+              }
+            >
               <Icon size={19} />
               <span>{label}</span>
             </NavLink>
@@ -74,7 +88,8 @@ export function Sidebar({ role, open, onClose }: SidebarProps) {
             <p>Seu negócio e seus alunos em um só fluxo.</p>
           </div>
           <button className="sidebar-link sidebar-link--logout" onClick={logout}>
-            <LogOut size={19} /><span>Sair</span>
+            <LogOut size={19} />
+            <span>Sair</span>
           </button>
         </div>
       </aside>

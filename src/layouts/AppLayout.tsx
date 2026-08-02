@@ -12,7 +12,9 @@ export function AppLayout({ role }: { role: UserRole }) {
       <Sidebar role={role} open={menuOpen} onClose={() => setMenuOpen(false)} />
       <div className="app-main">
         <Topbar onMenuClick={() => setMenuOpen(true)} />
-        <main className="page-container"><Outlet /></main>
+        <main className="page-container">
+          <Outlet />
+        </main>
       </div>
     </div>
   );

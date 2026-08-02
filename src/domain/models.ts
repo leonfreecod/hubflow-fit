@@ -3,6 +3,7 @@ export type StudentStatus = 'ACTIVE' | 'PAUSED' | 'INACTIVE';
 export type PaymentStatus = 'PAID' | 'PENDING' | 'OVERDUE';
 export type ScheduleStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELED';
 export type WorkoutLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+export type AccountStatus = 'INVITED' | 'ACTIVE' | 'DISABLED';
 
 export interface User {
   id: string;
@@ -13,6 +14,7 @@ export interface User {
   role: UserRole;
   avatar?: string;
   linkedStudentId?: string;
+  accountStatus?: AccountStatus;
 }
 
 export interface Student {
@@ -43,6 +45,18 @@ export interface Payment {
   method: 'PIX' | 'CARD' | 'CASH' | 'TRANSFER';
 }
 
+export interface PixCharge {
+  id: string;
+  paymentId: string;
+  provider: string;
+  copyPaste: string;
+  qrCodePayload: string;
+  status: 'ACTIVE' | 'PAID' | 'EXPIRED' | 'CANCELED';
+  amount: number;
+  expiresAt: string;
+  simulated: boolean;
+}
+
 export interface ScheduleEvent {
   id: string;
   studentId: string;
@@ -54,6 +68,8 @@ export interface ScheduleEvent {
   location: string;
   status: ScheduleStatus;
   type: 'ASSESSMENT' | 'PERSONAL' | 'GROUP' | 'ONLINE';
+  recurrenceGroupId?: string;
+  recurrenceWeeks?: number;
 }
 
 export interface WorkoutPlan {
@@ -66,6 +82,24 @@ export interface WorkoutPlan {
   assignedStudentIds: string[];
   updatedAt: string;
   description: string;
+  sessions?: WorkoutSession[];
+}
+
+export interface WorkoutSession {
+  id: string;
+  weekNumber: number;
+  dayOrder: number;
+  name: string;
+  instructions: string;
+  exercises: WorkoutExercise[];
+  completed: boolean;
+}
+
+export interface WorkoutExercise {
+  id: string;
+  name: string;
+  prescription: string;
+  restSeconds: number;
 }
 
 export interface OrganizationSettings {
@@ -87,4 +121,9 @@ export interface StudentProgressPoint {
   month: string;
   performance: number;
   consistency: number;
+}
+
+export interface Invitation {
+  activationUrl: string;
+  expiresAt: string;
 }

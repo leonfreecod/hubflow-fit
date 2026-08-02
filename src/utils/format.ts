@@ -24,11 +24,22 @@ export function getFirstName(name: string): string {
 
 export function statusLabel(status: string): string {
   const labels: Record<string, string> = {
-    ACTIVE: 'Ativo', PAUSED: 'Pausado', INACTIVE: 'Inativo',
-    PAID: 'Pago', PENDING: 'Pendente', OVERDUE: 'Em atraso',
-    SCHEDULED: 'Agendado', COMPLETED: 'Concluído', CANCELED: 'Cancelado',
-    BEGINNER: 'Iniciante', INTERMEDIATE: 'Intermediário', ADVANCED: 'Avançado',
-    ASSESSMENT: 'Avaliação', PERSONAL: 'Personal', GROUP: 'Grupo', ONLINE: 'Online',
+    ACTIVE: 'Ativo',
+    PAUSED: 'Pausado',
+    INACTIVE: 'Inativo',
+    PAID: 'Pago',
+    PENDING: 'Pendente',
+    OVERDUE: 'Em atraso',
+    SCHEDULED: 'Agendado',
+    COMPLETED: 'Concluído',
+    CANCELED: 'Cancelado',
+    BEGINNER: 'Iniciante',
+    INTERMEDIATE: 'Intermediário',
+    ADVANCED: 'Avançado',
+    ASSESSMENT: 'Avaliação',
+    PERSONAL: 'Personal',
+    GROUP: 'Grupo',
+    ONLINE: 'Online',
   };
   return labels[status] ?? status;
 }
