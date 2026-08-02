@@ -31,7 +31,7 @@ jobs:
       - run: npm run build
       - name: Upload frontend coverage
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: coverage
@@ -51,7 +51,7 @@ jobs:
       - run: mvn -f backend/pom.xml verify
       - name: Upload backend coverage
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: backend-coverage
           path: backend/target/site/jacoco
@@ -83,7 +83,7 @@ jobs:
         run: docker compose logs --no-color
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: playwright-report
