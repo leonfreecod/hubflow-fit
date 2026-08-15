@@ -118,25 +118,6 @@ export function LoginPage() {
             <p>Acesse a plataforma como administrador ou aluno.</p>
           </div>
 
-          {portfolioDemoMode && (
-            <div className="portfolio-demo-access" aria-label="Credenciais de demonstração">
-              <div>
-                <span>Acesso de portfólio</span>
-                <strong>Dados fictícios · somente leitura</strong>
-              </div>
-              <dl>
-                <div>
-                  <dt>Login</dt>
-                  <dd>{demoEmail}</dd>
-                </div>
-                <div>
-                  <dt>Senha</dt>
-                  <dd>{demoPassword}</dd>
-                </div>
-              </dl>
-            </div>
-          )}
-
           {localDemoMode && (
             <div className="demo-switch">
               <button

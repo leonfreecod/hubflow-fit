@@ -21,9 +21,6 @@ test.describe('public portfolio demo', () => {
     await page.setViewportSize({ width: 320, height: 800 });
     await page.goto('/login');
 
-    await expect(page.getByLabel('Credenciais de demonstração')).toContainText(
-      'Dados fictícios · somente leitura',
-    );
     await expect(page.getByLabel('E-mail')).toHaveValue('demo@hubflow.fit');
     await expect(page.getByLabel('Senha', { exact: true })).toHaveValue('123456');
     await page.screenshot({ path: 'test-results/portfolio-login-mobile.png', fullPage: true });

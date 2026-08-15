@@ -301,57 +301,6 @@ p {
   font-size: 0.69rem;
   opacity: 0.66;
 }
-.portfolio-demo-access {
-  display: grid;
-  gap: 14px;
-  margin-bottom: 22px;
-  padding: 16px;
-  border: 1px solid #d8cf9d;
-  border-radius: 14px;
-  background: #fff9da;
-}
-.portfolio-demo-access > div span,
-.portfolio-demo-access > div strong {
-  display: block;
-}
-.portfolio-demo-access > div span {
-  color: #76620d;
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-.portfolio-demo-access > div strong {
-  margin-top: 4px;
-  color: #29230d;
-  font-size: 0.8rem;
-}
-.portfolio-demo-access dl {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.65fr);
-  gap: 8px;
-  margin: 0;
-}
-.portfolio-demo-access dl > div {
-  min-width: 0;
-  padding: 9px 10px;
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.72);
-}
-.portfolio-demo-access dt {
-  color: #847a51;
-  font-size: 0.6rem;
-  font-weight: 750;
-  text-transform: uppercase;
-}
-.portfolio-demo-access dd {
-  overflow-wrap: anywhere;
-  margin: 3px 0 0;
-  color: #211f17;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
 .login-panel .field span {
   color: #484848;
 }
@@ -2496,9 +2445,6 @@ p {
   }
   .login-panel {
     padding: 25px 18px;
-  }
-  .portfolio-demo-access dl {
-    grid-template-columns: minmax(0, 1fr);
   }
   .read-only-banner {
     align-items: flex-start;
