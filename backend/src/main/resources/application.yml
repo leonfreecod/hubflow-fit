@@ -23,6 +23,10 @@ management:
       show-details: never
 
 app:
+  portfolio-demo:
+    enabled: ${PORTFOLIO_DEMO_ENABLED:false}
+    email: ${PORTFOLIO_DEMO_EMAIL:demo@hubflow.fit}
+    password: ${PORTFOLIO_DEMO_PASSWORD:}
   frontend:
     base-url: ${APP_FRONTEND_URL:http://localhost:5173}
   accounts:

@@ -15,6 +15,7 @@ export interface User {
   avatar?: string;
   linkedStudentId?: string;
   accountStatus?: AccountStatus;
+  readOnly?: boolean;
 }
 
 export interface Student {

@@ -242,6 +242,7 @@ public class ApiMapper {
                 user.getEmail(),
                 user.getRole(),
                 user.getAccountStatus(),
+                user.isReadOnly(),
                 user.getAvatar(),
                 user.getLinkedStudent() == null ? null : idAsString(user.getLinkedStudent().getId())
         );

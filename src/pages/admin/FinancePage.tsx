@@ -242,7 +242,7 @@ export function FinancePage() {
             ))}
           </div>
         </div>
-        <div className="table-wrap">
+        <div className="table-wrap table-wrap--responsive">
           {collection.loading ? (
             <EmptyState
               title="Carregando pagamentos"
@@ -254,7 +254,7 @@ export function FinancePage() {
               description="Ajuste o filtro ou crie uma nova cobrança."
             />
           ) : (
-            <table className="data-table">
+            <table className="data-table data-table--responsive">
               <thead>
                 <tr>
                   <th>Aluno</th>
@@ -269,19 +269,19 @@ export function FinancePage() {
               <tbody>
                 {filtered.map((payment) => (
                   <tr key={payment.id}>
-                    <td>
+                    <td data-label="Aluno">
                       <strong>{payment.studentName}</strong>
                     </td>
-                    <td>{payment.description}</td>
-                    <td>{formatDate(payment.dueDate)}</td>
-                    <td>{payment.method}</td>
-                    <td>
+                    <td data-label="Descrição">{payment.description}</td>
+                    <td data-label="Vencimento">{formatDate(payment.dueDate)}</td>
+                    <td data-label="Método">{payment.method}</td>
+                    <td data-label="Valor">
                       <strong>{formatCurrency(payment.amount)}</strong>
                     </td>
-                    <td>
+                    <td data-label="Status">
                       <Badge status={payment.status} />
                     </td>
-                    <td>
+                    <td data-label="Ações">
                       <div className="row-actions">
                         {payment.status !== 'PAID' && (
                           <button

@@ -20,7 +20,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       DATABASE_URL: jdbc:postgresql://postgres:5432/${DATABASE_NAME:-hubflow}
       DATABASE_USERNAME: ${DATABASE_USERNAME:?Defina DATABASE_USERNAME}
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Defina DATABASE_PASSWORD}
@@ -29,6 +29,9 @@ services:
       CORS_ALLOWED_ORIGIN: ${APP_ORIGIN:?Defina APP_ORIGIN}
       APP_FRONTEND_URL: ${APP_ORIGIN:?Defina APP_ORIGIN}
       PIX_WEBHOOK_SECRET: ${PIX_WEBHOOK_SECRET:?Defina PIX_WEBHOOK_SECRET}
+      PORTFOLIO_DEMO_ENABLED: ${PORTFOLIO_DEMO_ENABLED:-false}
+      PORTFOLIO_DEMO_EMAIL: ${PORTFOLIO_DEMO_EMAIL:-demo@hubflow.fit}
+      PORTFOLIO_DEMO_PASSWORD: '${PORTFOLIO_DEMO_PASSWORD:-}'
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,7 +49,9 @@ services:
       args:
         VITE_API_URL: /api
         VITE_DATA_SOURCE: api
-        VITE_DEMO_MODE: 'false'
+        VITE_DEMO_MODE: '${PORTFOLIO_DEMO_ENABLED:-false}'
+        VITE_DEMO_EMAIL: '${PORTFOLIO_DEMO_EMAIL:-demo@hubflow.fit}'
+        VITE_DEMO_ACCESS_CODE: '${PORTFOLIO_DEMO_PASSWORD:-}'
     restart: unless-stopped
     ports:
       - '${APP_PORT:-8080}:8080'

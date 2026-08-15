@@ -31,7 +31,7 @@ function getErrorMessage(status: number, body: ApiErrorBody): string {
   }
 
   if (status === 401) return 'Sua sessão expirou ou as credenciais são inválidas.';
-  if (status === 403) return 'Você não tem permissão para executar esta operação.';
+  if (status === 403) return body.message ?? 'Você não tem permissão para executar esta operação.';
   if (status >= 500) return 'A API encontrou um erro interno. Tente novamente em instantes.';
   return body.message ?? `Erro HTTP ${status}.`;
 }

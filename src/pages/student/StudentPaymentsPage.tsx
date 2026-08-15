@@ -156,8 +156,8 @@ export function StudentPaymentsPage() {
             description="Ainda não há cobranças vinculadas à sua conta."
           />
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
+          <div className="table-wrap table-wrap--responsive">
+            <table className="data-table data-table--responsive">
               <thead>
                 <tr>
                   <th>Descrição</th>
@@ -171,14 +171,16 @@ export function StudentPaymentsPage() {
               <tbody>
                 {payments.map((payment) => (
                   <tr key={payment.id}>
-                    <td>
+                    <td data-label="Descrição">
                       <strong>{payment.description}</strong>
                     </td>
-                    <td>{formatDate(payment.dueDate)}</td>
-                    <td>{payment.paidAt ? formatDate(payment.paidAt) : '—'}</td>
-                    <td>{payment.method}</td>
-                    <td>{formatCurrency(payment.amount)}</td>
-                    <td>
+                    <td data-label="Vencimento">{formatDate(payment.dueDate)}</td>
+                    <td data-label="Pagamento">
+                      {payment.paidAt ? formatDate(payment.paidAt) : '—'}
+                    </td>
+                    <td data-label="Método">{payment.method}</td>
+                    <td data-label="Valor">{formatCurrency(payment.amount)}</td>
+                    <td data-label="Status">
                       <Badge status={payment.status} />
                     </td>
                   </tr>

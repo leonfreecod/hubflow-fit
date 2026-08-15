@@ -85,4 +85,32 @@ describe('apiRequest', () => {
       message: 'Não foi possível conectar à API. Verifique se o backend está ativo.',
     });
   });
+
+  it('preserves the backend explanation for read-only accounts', async () => {
+    document.cookie = 'XSRF-TOKEN=csrf-read-only; path=/';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            message: 'Esta conta de demonstração é somente leitura. Alterações estão desativadas.',
+          }),
+          {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      ),
+    );
+
+    await expect(
+      apiRequest('/students', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Tentativa' }),
+      }),
+    ).rejects.toMatchObject({
+      status: 403,
+      message: 'Esta conta de demonstração é somente leitura. Alterações estão desativadas.',
+    });
+  });
 });

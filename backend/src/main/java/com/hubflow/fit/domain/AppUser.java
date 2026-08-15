@@ -13,6 +13,7 @@ public class AppUser {
     @Column(nullable = false) private String passwordHash;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private UserRole role;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private AccountStatus accountStatus;
+    @Column(nullable = false) private boolean readOnly;
     private String avatar;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "organization_id", nullable = false)
@@ -33,6 +34,8 @@ public class AppUser {
     public void setRole(UserRole role) { this.role = role; }
     public AccountStatus getAccountStatus() { return accountStatus; }
     public void setAccountStatus(AccountStatus accountStatus) { this.accountStatus = accountStatus; }
+    public boolean isReadOnly() { return readOnly; }
+    public void setReadOnly(boolean readOnly) { this.readOnly = readOnly; }
     public String getAvatar() { return avatar; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
     public Student getLinkedStudent() { return linkedStudent; }
