@@ -229,8 +229,8 @@ export function AdminDashboardPage() {
               Abrir financeiro
             </button>
           </div>
-          <div className="table-wrap">
-            <table className="data-table data-table--compact">
+          <div className="table-wrap table-wrap--responsive">
+            <table className="data-table data-table--compact data-table--responsive">
               <thead>
                 <tr>
                   <th>Aluno</th>
@@ -242,13 +242,13 @@ export function AdminDashboardPage() {
               <tbody>
                 {pending.slice(0, 4).map((payment) => (
                   <tr key={payment.id}>
-                    <td>
+                    <td data-label="Aluno">
                       <strong>{payment.studentName}</strong>
                       <span>{payment.description}</span>
                     </td>
-                    <td>{formatDate(payment.dueDate)}</td>
-                    <td>{formatCurrency(payment.amount)}</td>
-                    <td>
+                    <td data-label="Vencimento">{formatDate(payment.dueDate)}</td>
+                    <td data-label="Valor">{formatCurrency(payment.amount)}</td>
+                    <td data-label="Status">
                       <Badge status={payment.status} />
                     </td>
                   </tr>

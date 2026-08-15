@@ -108,7 +108,7 @@ O E2E Chromium percorre CRUD de alunos, pagamentos, agenda e treinos contra a AP
 
 ## Produção
 
-O arquivo de produção não ativa seed demo, não publica o PostgreSQL, desabilita Swagger e exige cookies seguros.
+Por padrão, o arquivo de produção não ativa seed demo, não publica o PostgreSQL, desabilita Swagger e exige cookies seguros.
 
 ```bash
 cp .env.prod.example .env.prod
@@ -116,7 +116,20 @@ cp .env.prod.example .env.prod
 docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build --wait
 ```
 
-Coloque um proxy reverso com TLS na frente da porta `APP_PORT`. `APP_ORIGIN` deve coincidir exatamente com a origem pública HTTPS. Nunca use as credenciais demonstrativas nem os valores de exemplo em produção.
+Coloque um proxy reverso com TLS na frente da porta `APP_PORT`. `APP_ORIGIN` deve coincidir exatamente com a origem pública HTTPS. Nunca use as credenciais demonstrativas nem os valores de exemplo em uma operação com dados reais.
+
+### Portfólio público opcional
+
+Uma implantação usada exclusivamente como portfólio pode ativar o seed fictício e a conta pública de administrador somente leitura:
+
+```dotenv
+SPRING_PROFILES_ACTIVE=prod,demo
+PORTFOLIO_DEMO_ENABLED=true
+PORTFOLIO_DEMO_EMAIL=demo@hubflow.fit
+PORTFOLIO_DEMO_PASSWORD=123456
+```
+
+O frontend exibe e preenche essas credenciais. A API permite navegação e consultas, mas bloqueia alterações feitas pela conta pública mesmo que alguém tente chamar os endpoints diretamente. A senha é pública por definição e não deve ser reutilizada em nenhum outro serviço.
 
 Consulte [docs/operations.md](docs/operations.md) para deploy, atualização, observabilidade, backup, restauração e resposta a incidentes.
 

@@ -4,15 +4,15 @@ API multiempresa em Java 21, Spring Boot 3.5, Spring Security, JPA, Flyway e Pos
 
 ## Perfis
 
-| Perfil   | Banco/efeito                                                        | Uso                                                  |
-| -------- | ------------------------------------------------------------------- | ---------------------------------------------------- |
-| `dev`    | H2 persistente                                                      | desenvolvimento local                                |
-| `demo`   | cria organização, usuários e dados fictícios; registra links no log | demonstração, sempre combinado com `dev` ou `docker` |
-| `docker` | PostgreSQL configurado por ambiente                                 | Compose local                                        |
-| `prod`   | PostgreSQL obrigatório, cookie seguro, Swagger e seed desativados   | produção                                             |
-| `test`   | H2 isolado                                                          | testes automatizados                                 |
+| Perfil   | Banco/efeito                                                        | Uso                                                       |
+| -------- | ------------------------------------------------------------------- | --------------------------------------------------------- |
+| `dev`    | H2 persistente                                                      | desenvolvimento local                                     |
+| `demo`   | cria organização, usuários e dados fictícios; registra links no log | demonstração local ou portfólio explicitamente habilitado |
+| `docker` | PostgreSQL configurado por ambiente                                 | Compose local                                             |
+| `prod`   | PostgreSQL obrigatório, cookie seguro, Swagger e seed desativados   | produção                                                  |
+| `test`   | H2 isolado                                                          | testes automatizados                                      |
 
-O padrão é `dev,demo`. O Compose local ativa `docker,demo`; o Compose de produção ativa apenas `prod`.
+O padrão é `dev,demo`. O Compose local ativa `docker,demo`; o Compose de produção ativa apenas `prod`, salvo quando uma implantação de portfólio habilita deliberadamente `prod,demo` e a conta pública somente leitura.
 
 ## Execução local
 
@@ -77,6 +77,9 @@ mvn verify
 | `LOGIN_BLOCK_MINUTES`               | `15`                               | configurável                       |
 | `INVITATION_EXPIRATION_HOURS`       | `72`                               | configurável                       |
 | `PASSWORD_RESET_EXPIRATION_MINUTES` | `30`                               | configurável                       |
+| `PORTFOLIO_DEMO_ENABLED`            | `false`                            | habilite somente para portfólio    |
+| `PORTFOLIO_DEMO_EMAIL`              | `demo@hubflow.fit`                 | credencial pública configurável    |
+| `PORTFOLIO_DEMO_PASSWORD`           | vazia                              | obrigatória quando habilitado      |
 | `PORT`                              | `8080`                             | configurável                       |
 
 ## Migrations

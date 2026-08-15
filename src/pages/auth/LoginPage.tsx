@@ -7,9 +7,17 @@ import { useAuth } from '../../features/auth/AuthContext';
 import { usesApiDataSource } from '../../services/repositories/localRepositories';
 
 export function LoginPage() {
-  const demoMode = !usesApiDataSource || import.meta.env.VITE_DEMO_MODE === 'true';
-  const [email, setEmail] = useState(demoMode ? 'admin@hubflow.fit' : '');
-  const [password, setPassword] = useState(demoMode ? 'hubflow123' : '');
+  const localDemoMode = !usesApiDataSource;
+  const portfolioDemoMode = usesApiDataSource && import.meta.env.VITE_DEMO_MODE === 'true';
+  const demoMode = localDemoMode || portfolioDemoMode;
+  const demoEmail = portfolioDemoMode
+    ? (import.meta.env.VITE_DEMO_EMAIL ?? 'demo@hubflow.fit')
+    : 'admin@hubflow.fit';
+  const demoPassword = portfolioDemoMode
+    ? (import.meta.env.VITE_DEMO_ACCESS_CODE ?? '')
+    : 'hubflow123';
+  const [email, setEmail] = useState(demoMode ? demoEmail : '');
+  const [password, setPassword] = useState(demoMode ? demoPassword : '');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -110,7 +118,26 @@ export function LoginPage() {
             <p>Acesse a plataforma como administrador ou aluno.</p>
           </div>
 
-          {demoMode && (
+          {portfolioDemoMode && (
+            <div className="portfolio-demo-access" aria-label="Credenciais de demonstração">
+              <div>
+                <span>Acesso de portfólio</span>
+                <strong>Dados fictícios · somente leitura</strong>
+              </div>
+              <dl>
+                <div>
+                  <dt>Login</dt>
+                  <dd>{demoEmail}</dd>
+                </div>
+                <div>
+                  <dt>Senha</dt>
+                  <dd>{demoPassword}</dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          {localDemoMode && (
             <div className="demo-switch">
               <button
                 type="button"
@@ -164,9 +191,14 @@ export function LoginPage() {
             </div>
             {error && <div className="form-error">{error}</div>}
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Entrando...' : 'Entrar na plataforma'} <ArrowRight size={18} />
+              {submitting
+                ? 'Entrando...'
+                : portfolioDemoMode
+                  ? 'Entrar na demonstração'
+                  : 'Entrar na plataforma'}{' '}
+              <ArrowRight size={18} />
             </Button>
-            {usesApiDataSource && (
+            {usesApiDataSource && !portfolioDemoMode && (
               <Link className="auth-secondary-link" to="/esqueci-senha">
                 Esqueci minha senha
               </Link>
@@ -174,9 +206,11 @@ export function LoginPage() {
           </form>
 
           <p className="login-note">
-            {usesApiDataSource
-              ? 'Sessão protegida pela API HubFlow Fit.'
-              : 'Projeto demonstrativo com dados simulados e persistência local.'}
+            {portfolioDemoMode
+              ? 'A conta pública permite navegar por todas as telas sem alterar os dados.'
+              : usesApiDataSource
+                ? 'Sessão protegida pela API HubFlow Fit.'
+                : 'Projeto demonstrativo com dados simulados e persistência local.'}
           </p>
         </div>
       </section>

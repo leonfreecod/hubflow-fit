@@ -10,6 +10,7 @@ public record UserResponse(
         String email,
         UserRole role,
         AccountStatus accountStatus,
+        boolean readOnly,
         @JsonInclude(JsonInclude.Include.NON_NULL) String avatar,
         @JsonInclude(JsonInclude.Include.NON_NULL) String linkedStudentId
 ) {

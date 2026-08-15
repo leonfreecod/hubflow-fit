@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -50,6 +51,8 @@ public class DevDataInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DevDataInitializer.class);
     private static final String DEVELOPMENT_PASSWORD = "hubflow123";
+    private static final String DEVELOPMENT_ADMIN_EMAIL = "admin@hubflow.fit";
+    private static final String DEVELOPMENT_STUDENT_EMAIL = "aluno@hubflow.fit";
 
     private static final List<StudentSeed> STUDENTS = List.of(
             new StudentSeed(
@@ -183,6 +186,9 @@ public class DevDataInitializer implements ApplicationRunner {
     private final WorkoutPlanRepository workoutPlanRepository;
     private final MonthlyRevenueRepository monthlyRevenueRepository;
     private final StudentProgressPointRepository studentProgressPointRepository;
+    private final boolean portfolioDemoEnabled;
+    private final String portfolioDemoEmail;
+    private final String portfolioDemoPassword;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public DevDataInitializer(
@@ -193,7 +199,10 @@ public class DevDataInitializer implements ApplicationRunner {
             ScheduleEventRepository scheduleEventRepository,
             WorkoutPlanRepository workoutPlanRepository,
             MonthlyRevenueRepository monthlyRevenueRepository,
-            StudentProgressPointRepository studentProgressPointRepository
+            StudentProgressPointRepository studentProgressPointRepository,
+            @Value("${app.portfolio-demo.enabled:false}") boolean portfolioDemoEnabled,
+            @Value("${app.portfolio-demo.email:demo@hubflow.fit}") String portfolioDemoEmail,
+            @Value("${app.portfolio-demo.password:}") String portfolioDemoPassword
     ) {
         this.studentRepository = studentRepository;
         this.appUserRepository = appUserRepository;
@@ -203,6 +212,9 @@ public class DevDataInitializer implements ApplicationRunner {
         this.workoutPlanRepository = workoutPlanRepository;
         this.monthlyRevenueRepository = monthlyRevenueRepository;
         this.studentProgressPointRepository = studentProgressPointRepository;
+        this.portfolioDemoEnabled = portfolioDemoEnabled;
+        this.portfolioDemoEmail = portfolioDemoEmail.trim().toLowerCase(java.util.Locale.ROOT);
+        this.portfolioDemoPassword = portfolioDemoPassword;
     }
 
     @Override
@@ -219,7 +231,7 @@ public class DevDataInitializer implements ApplicationRunner {
         int progressCreated = seedStudentProgress(students.byKey().get("student-001"));
 
         log.info(
-                "Seed dev verificado: {} aluno(s), {} organização(ões), {} usuário(s), "
+                "Seed de demonstração verificado: {} aluno(s), {} organização(ões), {} usuário(s), "
                         + "{} pagamento(s), {} evento(s), {} treino(s), {} receita(s) "
                         + "e {} ponto(s) de progresso criado(s)",
                 students.created(), organizationResult.created(), usersCreated, paymentsCreated,
@@ -268,22 +280,68 @@ public class DevDataInitializer implements ApplicationRunner {
             Map<String, Student> studentsByKey,
             OrganizationSettings organization
     ) {
+        if (portfolioDemoEnabled) {
+            return seedPortfolioUser(organization);
+        }
+
         int created = 0;
-        if (appUserRepository.findByEmailIgnoreCase("admin@hubflow.fit").isEmpty()) {
+        if (appUserRepository.findByEmailIgnoreCase(DEVELOPMENT_ADMIN_EMAIL).isEmpty()) {
             appUserRepository.save(newUser(
-                    "Rafael Martins", "admin@hubflow.fit", UserRole.ADMIN, null, organization
+                    "Rafael Martins", DEVELOPMENT_ADMIN_EMAIL, DEVELOPMENT_PASSWORD,
+                    UserRole.ADMIN, false, null, organization
             ));
             created++;
         }
 
-        if (appUserRepository.findByEmailIgnoreCase("aluno@hubflow.fit").isEmpty()) {
+        if (appUserRepository.findByEmailIgnoreCase(DEVELOPMENT_STUDENT_EMAIL).isEmpty()) {
             appUserRepository.save(newUser(
-                    "Mariana Costa", "aluno@hubflow.fit", UserRole.STUDENT,
-                    studentsByKey.get("student-001"), organization
+                    "Mariana Costa", DEVELOPMENT_STUDENT_EMAIL, DEVELOPMENT_PASSWORD,
+                    UserRole.STUDENT, false, studentsByKey.get("student-001"), organization
             ));
             created++;
         }
         return created;
+    }
+
+    private int seedPortfolioUser(OrganizationSettings organization) {
+        if (portfolioDemoEmail.isBlank() || !portfolioDemoEmail.contains("@")) {
+            throw new IllegalStateException("PORTFOLIO_DEMO_EMAIL deve ser um e-mail válido.");
+        }
+        if (portfolioDemoPassword.isBlank()) {
+            throw new IllegalStateException("PORTFOLIO_DEMO_PASSWORD deve ser definida.");
+        }
+
+        AppUser user = appUserRepository.findByEmailIgnoreCase(portfolioDemoEmail).orElse(null);
+        int created = 0;
+        if (user == null) {
+            user = newUser(
+                    "Visitante HubFlow", portfolioDemoEmail, portfolioDemoPassword,
+                    UserRole.ADMIN, true, null, organization
+            );
+            created = 1;
+        } else {
+            user.setName("Visitante HubFlow");
+            user.setRole(UserRole.ADMIN);
+            user.setAccountStatus(AccountStatus.ACTIVE);
+            user.setReadOnly(true);
+            user.setLinkedStudent(null);
+            user.setOrganization(organization);
+            if (!passwordEncoder.matches(portfolioDemoPassword, user.getPasswordHash())) {
+                user.setPasswordHash(passwordEncoder.encode(portfolioDemoPassword));
+            }
+        }
+        appUserRepository.save(user);
+
+        markLegacyDemoAccountReadOnly(DEVELOPMENT_ADMIN_EMAIL);
+        markLegacyDemoAccountReadOnly(DEVELOPMENT_STUDENT_EMAIL);
+        return created;
+    }
+
+    private void markLegacyDemoAccountReadOnly(String email) {
+        appUserRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
+            user.setReadOnly(true);
+            appUserRepository.save(user);
+        });
     }
 
     private int seedPayments(Map<String, Student> studentsByKey) {
@@ -344,8 +402,7 @@ public class DevDataInitializer implements ApplicationRunner {
                 workoutPlanRepository.save(toWorkoutPlan(seed, studentsByKey, organization));
                 created++;
             } else if (existing.getSessions().isEmpty()) {
-                existing.setSessions(createSampleSessions(existing));
-                workoutPlanRepository.save(existing);
+                existing.getSessions().addAll(createSampleSessions(existing));
             }
         }
         return created;
@@ -410,16 +467,19 @@ public class DevDataInitializer implements ApplicationRunner {
     private AppUser newUser(
             String name,
             String email,
+            String password,
             UserRole role,
+            boolean readOnly,
             Student linkedStudent,
             OrganizationSettings organization
     ) {
         AppUser user = new AppUser();
         user.setName(name);
         user.setEmail(email);
-        user.setPasswordHash(passwordEncoder.encode(DEVELOPMENT_PASSWORD));
+        user.setPasswordHash(passwordEncoder.encode(password));
         user.setRole(role);
         user.setAccountStatus(AccountStatus.ACTIVE);
+        user.setReadOnly(readOnly);
         user.setLinkedStudent(linkedStudent);
         user.setOrganization(organization);
         return user;

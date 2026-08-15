@@ -177,7 +177,7 @@ export function StudentsPage() {
       </Card>
 
       <Card>
-        <div className="table-wrap">
+        <div className="table-wrap table-wrap--responsive">
           {collection.loading ? (
             <EmptyState
               title="Carregando alunos"
@@ -189,7 +189,7 @@ export function StudentsPage() {
               description="Ajuste os filtros ou cadastre um novo aluno."
             />
           ) : (
-            <table className="data-table">
+            <table className="data-table data-table--responsive">
               <thead>
                 <tr>
                   <th>Aluno</th>
@@ -203,7 +203,7 @@ export function StudentsPage() {
               <tbody>
                 {filtered.map((student) => (
                   <tr key={student.id}>
-                    <td>
+                    <td data-label="Aluno">
                       <div className="person-cell">
                         <span className="avatar avatar--small">{student.initials}</span>
                         <div>
@@ -212,16 +212,16 @@ export function StudentsPage() {
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Plano">
                       <strong>{student.plan}</strong>
                       <span>{student.goal}</span>
                     </td>
-                    <td>{formatCurrency(student.monthlyFee)}</td>
-                    <td>{formatDate(student.nextBillingDate)}</td>
-                    <td>
+                    <td data-label="Mensalidade">{formatCurrency(student.monthlyFee)}</td>
+                    <td data-label="Próxima cobrança">{formatDate(student.nextBillingDate)}</td>
+                    <td data-label="Status">
                       <Badge status={student.status} />
                     </td>
-                    <td>
+                    <td data-label="Ações">
                       <div className="row-actions">
                         <button
                           onClick={() => void inviteStudent(student)}

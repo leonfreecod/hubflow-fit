@@ -4,6 +4,7 @@ import com.hubflow.fit.security.JwtAuthenticationFilter;
 import com.hubflow.fit.security.AuthCookieService;
 import com.hubflow.fit.security.RestAccessDeniedHandler;
 import com.hubflow.fit.security.RestAuthenticationEntryPoint;
+import com.hubflow.fit.security.ReadOnlyAccountFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,6 +44,7 @@ public class SecurityConfig {
             AuthenticationProvider authenticationProvider,
             RestAuthenticationEntryPoint authenticationEntryPoint,
             RestAccessDeniedHandler accessDeniedHandler,
+            ReadOnlyAccountFilter readOnlyAccountFilter,
             CorsConfigurationSource corsConfigurationSource,
             AuthCookieService authCookieService
     ) throws Exception {
@@ -102,6 +104,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterAfter(
+                        readOnlyAccountFilter,
+                        JwtAuthenticationFilter.class
                 );
 
         return http.build();
